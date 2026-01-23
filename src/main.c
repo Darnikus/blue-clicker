@@ -14,6 +14,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "hid_dev.h"
+
 #define SPP_SERVER_NAME "ESP32_Key_Bridge"
 static const char *TAG = "KEY_BRIDGE";
 
@@ -34,42 +36,6 @@ const uint8_t hid_report_map[] = {
     0x25, 0x01, 0x75, 0x01, 0x95, 0x08, 0x81, 0x02, 0x95, 0x01, 0x75, 0x08, 0x81, 0x01, 0x95, 0x06, 
     0x75, 0x08, 0x15, 0x00, 0x25, 0x65, 0x05, 0x07, 0x19, 0x00, 0x29, 0x65, 0x81, 0x00, 0xc0
 };
-
-// --- Translation Helper ---
-typedef struct {
-    uint8_t code;
-    uint8_t modifier;
-} hid_key_t;
-
-hid_key_t ascii_to_hid(uint8_t ascii) {
-    hid_key_t k = {0, 0};
-    
-    // Lowercase a-z
-    if (ascii >= 'a' && ascii <= 'z') k.code = (ascii - 'a' + 0x04);
-    // Uppercase A-Z
-    else if (ascii >= 'A' && ascii <= 'Z') { k.code = (ascii - 'A' + 0x04); k.modifier = 0x02; }
-    // Numbers 1-9, then 0
-    else if (ascii >= '1' && ascii <= '9') k.code = (ascii - '1' + 0x1e);
-    else if (ascii == '0') k.code = 0x27;
-    
-    // Special Gaming Keys (Mapped to non-printable ASCII or specific characters)
-    else if (ascii == ' ') k.code = 0x2c; // Space
-    else if (ascii == '\t') k.code = 0x2b; // Tab
-    else if (ascii == 0x1B) k.code = 0x29; // Escape (Esc)
-    
-    // Custom mapping for Arrows (You can send these via Python)
-    // We can use common ANSI-like triggers
-    else if (ascii == '^') k.code = 0x52; // Up Arrow
-    else if (ascii == '|') k.code = 0x51; // Down Arrow (Vertical bar)
-    else if (ascii == '<') k.code = 0x50; // Left Arrow
-    else if (ascii == '>') k.code = 0x4f; // Right Arrow
-    
-    // Common symbols
-    else if (ascii == '!') { k.code = 0x1e; k.modifier = 0x02; }
-    else if (ascii == '?') { k.code = 0x38; k.modifier = 0x02; }
-    
-    return k;
-}
 
 static esp_ble_adv_params_t hidd_adv_params = {
     .adv_int_min        = 0x20,
