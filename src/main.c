@@ -36,14 +36,39 @@ const uint8_t hid_report_map[] = {
 };
 
 // --- Translation Helper ---
-uint8_t ascii_to_hid(uint8_t ascii) {
-    if (ascii >= 'a' && ascii <= 'z') return (ascii - 'a' + 0x04);
-    if (ascii >= 'A' && ascii <= 'Z') return (ascii - 'A' + 0x04);
-    if (ascii >= '1' && ascii <= '9') return (ascii - '1' + 0x1e);
-    if (ascii == '0') return 0x27;
-    if (ascii == ' ') return 0x2c;
-    if (ascii == '\n' || ascii == '\r') return 0x28;
-    return 0;
+typedef struct {
+    uint8_t code;
+    uint8_t modifier;
+} hid_key_t;
+
+hid_key_t ascii_to_hid(uint8_t ascii) {
+    hid_key_t k = {0, 0};
+    
+    // Lowercase a-z
+    if (ascii >= 'a' && ascii <= 'z') k.code = (ascii - 'a' + 0x04);
+    // Uppercase A-Z
+    else if (ascii >= 'A' && ascii <= 'Z') { k.code = (ascii - 'A' + 0x04); k.modifier = 0x02; }
+    // Numbers 1-9, then 0
+    else if (ascii >= '1' && ascii <= '9') k.code = (ascii - '1' + 0x1e);
+    else if (ascii == '0') k.code = 0x27;
+    
+    // Special Gaming Keys (Mapped to non-printable ASCII or specific characters)
+    else if (ascii == ' ') k.code = 0x2c; // Space
+    else if (ascii == '\t') k.code = 0x2b; // Tab
+    else if (ascii == 0x1B) k.code = 0x29; // Escape (Esc)
+    
+    // Custom mapping for Arrows (You can send these via Python)
+    // We can use common ANSI-like triggers
+    else if (ascii == '^') k.code = 0x52; // Up Arrow
+    else if (ascii == '|') k.code = 0x51; // Down Arrow (Vertical bar)
+    else if (ascii == '<') k.code = 0x50; // Left Arrow
+    else if (ascii == '>') k.code = 0x4f; // Right Arrow
+    
+    // Common symbols
+    else if (ascii == '!') { k.code = 0x1e; k.modifier = 0x02; }
+    else if (ascii == '?') { k.code = 0x38; k.modifier = 0x02; }
+    
+    return k;
 }
 
 static esp_ble_adv_params_t hidd_adv_params = {
@@ -121,14 +146,15 @@ static const esp_gatts_attr_db_t gatt_db[HIDD_LE_IDX_NB] = {
 };
 
 // --- BLE HID Logic: Sending keys ---
-void send_ble_key(uint8_t key_code) {
+void send_ble_key(uint8_t key_code, uint8_t modifier) {
     if (!connected_pc2 || report_handle == 0) return;
 
-    uint8_t report[8] = {0, 0, key_code, 0, 0, 0, 0, 0};
+    // Byte 0 is modifier, Byte 2 is the key
+    uint8_t report[8] = {modifier, 0, key_code, 0, 0, 0, 0, 0};
     uint8_t empty[8]  = {0, 0, 0, 0, 0, 0, 0, 0};
 
     esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
-    vTaskDelay(pdMS_TO_TICKS(10)); // Delay for PC OS stability
+    vTaskDelay(pdMS_TO_TICKS(10)); 
     esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, empty, false);
 }
 
@@ -195,14 +221,13 @@ void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
             ESP_LOGI(TAG, "Relaying %d bytes to PC2", param->data_ind.len);
             for (int i = 0; i < param->data_ind.len; i++) {
                 uint8_t data = param->data_ind.data[i];
-                
-                // Skip Newline (\n) and Carriage Return (\r)
-                if (data == '\n' || data == '\r') {
-                    continue; 
-                }
+                if (data == '\n' || data == '\r') continue;
 
-                uint8_t hid_code = ascii_to_hid(data);
-                if (hid_code != 0) send_ble_key(hid_code);
+                hid_key_t k = ascii_to_hid(data);
+                if (k.code != 0) {
+                    // Updated send_ble_key to accept modifier
+                    send_ble_key(k.code, k.modifier); 
+                }
             }
             break;
         case ESP_SPP_SRV_OPEN_EVT:
