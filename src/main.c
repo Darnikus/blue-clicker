@@ -15,6 +15,7 @@
 #include "freertos/task.h"
 
 #include "hid_dev.h"
+#include "spp_handler.h"
 
 #define SPP_SERVER_NAME "ESP32_Key_Bridge"
 static const char *TAG = "KEY_BRIDGE";
@@ -175,37 +176,6 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     }
 }
 
-void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
-    switch (event) {
-        case ESP_SPP_INIT_EVT:
-            esp_bt_gap_set_device_name(SPP_SERVER_NAME);
-            esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
-            // Change ESP_SPP_SEC_NONE to ESP_SPP_SEC_AUTHENTICATE
-            esp_spp_start_srv(ESP_SPP_SEC_AUTHENTICATE, ESP_SPP_ROLE_SLAVE, 1, SPP_SERVER_NAME);
-            break;
-        case ESP_SPP_DATA_IND_EVT:
-            ESP_LOGI(TAG, "Relaying %d bytes to PC2", param->data_ind.len);
-            for (int i = 0; i < param->data_ind.len; i++) {
-                uint8_t data = param->data_ind.data[i];
-                if (data == '\n' || data == '\r') continue;
-
-                hid_key_t k = ascii_to_hid(data);
-                if (k.code != 0) {
-                    // Updated send_ble_key to accept modifier
-                    send_ble_key(k.code, k.modifier); 
-                }
-            }
-            break;
-        case ESP_SPP_SRV_OPEN_EVT:
-            ESP_LOGI(TAG, "PC1 connected (SPP)");
-            break;
-        case ESP_SPP_CLOSE_EVT:
-            ESP_LOGI(TAG, "PC1 disconnected (SPP)");
-            break;
-        default: break;
-    }
-}
-
 void app_main() {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -252,10 +222,8 @@ void app_main() {
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 
-    // Initialize SPP
-    esp_spp_cfg_t spp_cfg = {.mode = ESP_SPP_MODE_CB, .enable_l2cap_ertm = true};
-    ESP_ERROR_CHECK(esp_spp_register_callback(esp_spp_cb));
-    ESP_ERROR_CHECK(esp_spp_enhanced_init(&spp_cfg));
+    // Replace the deleted SPP lines with this:
+    spp_init();
 
     // Initialize BLE
     ESP_ERROR_CHECK(esp_ble_gap_register_callback(ble_gap_event_handler));
