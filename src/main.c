@@ -50,16 +50,6 @@ void app_main() {
     uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
     uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
 
-    /* Set Classic BT (SPP) Security */
-    esp_bt_sp_param_t param_type = ESP_BT_SP_IOCAP_MODE;
-    esp_bt_io_cap_t bt_iocap = ESP_BT_IO_CAP_NONE;
-    esp_bt_gap_set_security_param(param_type, &bt_iocap, sizeof(uint8_t));
-
-    /* Enable PIN pairing for older clients if needed */
-    esp_bt_pin_type_t pin_type = ESP_BT_PIN_TYPE_FIXED;
-    esp_bt_pin_code_t pin_code = {'1', '2', '3', '4'};
-    esp_bt_gap_set_pin(pin_type, 0, pin_code);
-
     esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
@@ -67,6 +57,7 @@ void app_main() {
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 
     // Replace the deleted SPP lines with this:
+    esp_bt_gap_register_callback(esp_bt_gap_cb);
     spp_init();
 
     // Initialize BLE
