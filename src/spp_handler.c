@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "esp_bt_main.h"
 #include "esp_gap_bt_api.h"
+#include "esp_bt.h"
 
 #define SPP_SERVER_NAME "ESP32_Key_Bridge"
 static const char *TAG = "SPP_HANDLER";
@@ -47,6 +48,7 @@ void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
             break;
         case ESP_SPP_DATA_IND_EVT:
             ESP_LOGI(TAG, "Relaying %d bytes to PC2", param->data_ind.len);
+            ESP_LOG_BUFFER_HEXDUMP(TAG, param->data_ind.data, param->data_ind.len, ESP_LOG_INFO);
             for (int i = 0; i < param->data_ind.len; i++) {
                 uint8_t data = param->data_ind.data[i];
                 if (data == '\n' || data == '\r') continue;
@@ -69,6 +71,15 @@ void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
 }
 
 void spp_init(void) {
+    // Gives more "airtime" to the Classic BT (PC1) side
+    esp_bt_sleep_disable();
+
+    // Setup Class of Device for Linux compatibility
+    esp_bt_cod_t cod;
+    cod.major = ESP_BT_COD_MAJOR_DEV_PERIPHERAL; // Change from COMPUTER to PERIPHERAL
+    cod.minor = ESP_BT_COD_MINOR_PERIPHERAL_KEYBOARD; 
+    esp_bt_gap_set_cod(cod, ESP_BT_SET_COD_ALL);
+
     /* Set Classic BT (SPP) Security */
     esp_bt_sp_param_t param_type = ESP_BT_SP_IOCAP_MODE;
     esp_bt_io_cap_t bt_iocap = ESP_BT_IO_CAP_NONE;
@@ -82,6 +93,7 @@ void spp_init(void) {
     // Initialize SPP
     esp_spp_cfg_t spp_cfg = {.mode = ESP_SPP_MODE_CB, .enable_l2cap_ertm = true};
     ESP_ERROR_CHECK(esp_spp_register_callback(esp_spp_cb));
+    ESP_ERROR_CHECK(esp_bt_gap_register_callback(esp_bt_gap_cb));
     ESP_ERROR_CHECK(esp_spp_enhanced_init(&spp_cfg));
 
     ESP_LOGI(TAG, "SPP Module initialized");

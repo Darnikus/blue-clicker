@@ -19,9 +19,8 @@ enum {
     HIDD_LE_IDX_NB,
 };
 
-// Add these declarations:
-void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
-void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
+// The "Master Init" for BLE
+void ble_hid_init(void);
 void send_ble_key(uint8_t key_code, uint8_t modifier);
 
 #endif
