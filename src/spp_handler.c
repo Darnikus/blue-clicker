@@ -44,7 +44,7 @@ void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
             esp_bt_gap_set_device_name(SPP_SERVER_NAME);
             esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
             // Change ESP_SPP_SEC_NONE to ESP_SPP_SEC_AUTHENTICATE
-            esp_spp_start_srv(ESP_SPP_SEC_AUTHENTICATE, ESP_SPP_ROLE_SLAVE, 1, SPP_SERVER_NAME);
+            esp_spp_start_srv(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_SLAVE, 1, SPP_SERVER_NAME);
             break;
         case ESP_SPP_DATA_IND_EVT:
             ESP_LOGI(TAG, "Relaying %d bytes to PC2", param->data_ind.len);
@@ -91,7 +91,7 @@ void spp_init(void) {
     esp_bt_gap_set_pin(pin_type, 0, pin_code);
 
     // Initialize SPP
-    esp_spp_cfg_t spp_cfg = {.mode = ESP_SPP_MODE_CB, .enable_l2cap_ertm = true};
+    esp_spp_cfg_t spp_cfg = {.mode = ESP_SPP_MODE_CB, .enable_l2cap_ertm = false};
     ESP_ERROR_CHECK(esp_spp_register_callback(esp_spp_cb));
     ESP_ERROR_CHECK(esp_bt_gap_register_callback(esp_bt_gap_cb));
     ESP_ERROR_CHECK(esp_spp_enhanced_init(&spp_cfg));

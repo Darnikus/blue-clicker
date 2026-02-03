@@ -2,10 +2,12 @@
 #include "esp_log.h"
 #include "esp_hid_common.h"
 #include <string.h>
+#include "hid_dev.h"
 
 // Logic-supporting includes
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 #include "esp_bt.h"
 #include "esp_gap_ble_api.h"
 #include "esp_gatts_api.h"
@@ -16,6 +18,7 @@
 #define HIDD_REPORT_MAP_UUID        0x2A4B
 
 static const char *TAG = "HID_HANDLER";
+static QueueHandle_t key_queue = NULL;
 
 static uint16_t hid_conn_id = 0;
 static bool connected_pc2 = false;
@@ -92,17 +95,34 @@ uint8_t raw_adv_data[] = {
     0x0F, 0x09, 'E','S','P','3','2','_','K','e','y','b','o','a','r','d'
 };
 
+// The background worker task
+void ble_hid_task(void *pvParameters) {
+    hid_key_t key;
+    while (1) {
+        // Wait forever for a key to arrive in the queue
+        if (xQueueReceive(key_queue, &key, portMAX_DELAY)) {
+            if (connected_pc2 && report_handle != 0) {
+                uint8_t report[8] = {key.modifier, 0, key.code, 0, 0, 0, 0, 0};
+                uint8_t empty[8]  = {0, 0, 0, 0, 0, 0, 0, 0};
+
+                // Send Key Press
+                esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
+
+                vTaskDelay(pdMS_TO_TICKS(5)); // Small gap for PC to register press
+
+                // Send Key Release
+                esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, empty, false);
+            }
+        }
+    }
+}
+
 // --- BLE HID Logic: Sending keys ---
 void send_ble_key(uint8_t key_code, uint8_t modifier) {
-    if (!connected_pc2 || report_handle == 0) return;
-
-    // Byte 0 is modifier, Byte 2 is the key
-    uint8_t report[8] = {modifier, 0, key_code, 0, 0, 0, 0, 0};
-    uint8_t empty[8]  = {0, 0, 0, 0, 0, 0, 0, 0};
-
-    esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
-    vTaskDelay(pdMS_TO_TICKS(10)); 
-    esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, empty, false);
+    hid_key_t key = { .code = key_code, .modifier = modifier };
+    if (key_queue != NULL) {
+        xQueueSend(key_queue, &key, 0); // 0 means don't wait if full
+    }
 }
 
 void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
@@ -157,6 +177,9 @@ void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp
 }
 
 void ble_hid_init(void) {
+    key_queue = xQueueCreate(10, sizeof(hid_key_t));
+    xTaskCreate(ble_hid_task, "ble_hid_task", 4096, NULL, 5, NULL);
+
     // Setup BLE Security
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_BOND; // Enable bonding (saving the pair)
     esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;       // No keyboard/display on ESP32 itself
