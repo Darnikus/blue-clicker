@@ -71,17 +71,34 @@
 # finally:
 #     sock.close()
 
-import datetime
+
 import socket
 import time
 import logging
 from secrets import *
+
+import threading
+
+
+sending_flag = True
 
 # Basic configuration: output to console, INFO level and above
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Get a logger instance
 logger = logging.getLogger(__name__)
+
+def input_thread():
+    global sending_flag
+    while True:
+        cmd = input("Type 'stop' to pause, 'start' to resume: \n").strip().lower()
+        if cmd == 'stop':
+            sending_flag = False
+            print("--- SENDING PAUSED ---")
+        elif cmd == 'start':
+            sending_flag = True
+            print("--- SENDING RESUMED ---")
+
 
 def connect_and_send():
     while True:
@@ -97,25 +114,30 @@ def connect_and_send():
             while True:
                 # Example: Send a heartbeat or data
                 message = "a"
-                sock.send(message.encode('utf-8'))
-                # print(f"Time:{datetime.datetime.now()},  Sent: {message}")
-                logger.info(f"Sent: {message}")
-                
-                # If you don't receive data, the script won't know the 
-                # socket is dead until the next .send() call fails.
-                time.sleep(5)
+                if sending_flag:
+                    sock.send(message.encode('utf-8'))
+                    # print(f"Time:{datetime.datetime.now()},  Sent: {message}")
+                    logger.info(f"Sent: {message}")
+                    
+                    # If you don't receive data, the script won't know the 
+                    # socket is dead until the next .send() call fails.
+                    time.sleep(4)
 
         except socket.error as e:
-            print(f"Connection Lost: {e}")
-            print("Waiting 3 seconds before retrying...")
+            logger.error(f"Connection Lost: {e}")
+            logger.error("Waiting 3 seconds before retrying...")
             if sock:
                 sock.close()
             time.sleep(3)
         except KeyboardInterrupt:
-            print("\nUser stopped script.")
+            logger.error("\nUser stopped script.")
             if sock:
                 sock.close()
             break
 
 if __name__ == "__main__":
+    # Запускаємо потік для введення як "daemon", щоб він закрився разом з програмою
+    t = threading.Thread(target=input_thread, daemon=True)
+    t.start()
+
     connect_and_send()
