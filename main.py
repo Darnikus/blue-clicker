@@ -1,86 +1,13 @@
-# import socket
-# from secrets import *
-
-# try:
-#     # Create a Bluetooth RFCOMM socket
-#     sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-#     print(f"Connecting to {server_address}...")
-#     sock.connect((server_address, port))
-#     print("Connected to PC1 (SPP)!")
-
-#     while True:
-#         cmd = input("Enter text to send to PC2 (or 'quit' to exit): ")
-#         if cmd.lower() == 'quit':
-#             break
-#         # Send data (ensure no newline if your C code doesn't filter it)
-#         sock.send(cmd.encode('utf-8'))
-
-# except Exception as e:
-#     print(f"Error: {e}")
-# finally:
-#     sock.close()
-
-
-
-# import socket
-# from pynput import keyboard
-# from secrets import *
-
-# # Bluetooth Setup
-# sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-# sock.connect((server_address, port))
-
-
-# for i in range(10):
-#     sock.send('|'.encode('utf-8'))
-
-# def on_press(key):
-#     try:
-#         # Get the character (e.g., 'w', 'a', 's', 'd')
-#         char = key.char
-#         sock.send(char.encode('utf-8'))
-#     except AttributeError:
-#         # Handle special keys like space or enter if needed
-#         if key == keyboard.Key.space:
-#             sock.send(' '.encode('utf-8'))
-
-# # Start listening to your Fedora keyboard
-# with keyboard.Listener(on_press=on_press) as listener:
-#     print("Gaming Bridge Active. Press keys on Fedora to type on Windows...")
-#     listener.join()
-
-
-# import socket
-# import time
-# from secrets import *
-
-# try:
-#     # Create a Bluetooth RFCOMM socket
-#     sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-#     print(f"Connecting to {server_address}...")
-#     sock.connect((server_address, port))
-#     print("Connected to PC1 (SPP)!")
-
-#     while True:
-#         # Send data (ensure no newline if your C code doesn't filter it)
-#         sock.send("a".encode('utf-8'))
-#         time.sleep(5)
-
-# except Exception as e:
-#     print(f"Error: {e}")
-# finally:
-#     sock.close()
-
-
 import socket
 import time
 import logging
-from secrets import *
+from secrets import server_address, port
 
 import threading
+import random
 
 
-sending_flag = True
+sending_flag: bool = False
 
 # Basic configuration: output to console, INFO level and above
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -91,11 +18,11 @@ logger = logging.getLogger(__name__)
 def input_thread():
     global sending_flag
     while True:
-        cmd = input("Type 'stop' to pause, 'start' to resume: \n").strip().lower()
-        if cmd == 'stop':
+        cmd = input("Type '-' to pause, '+' to resume: \n").strip().lower()
+        if cmd == '-':
             sending_flag = False
             print("--- SENDING PAUSED ---")
-        elif cmd == 'start':
+        elif cmd == '+':
             sending_flag = True
             print("--- SENDING RESUMED ---")
 
@@ -109,7 +36,7 @@ def connect_and_send():
             sock.settimeout(5) # Don't hang forever on connect
             sock.connect((server_address, port))
             sock.settimeout(None) # Go back to blocking mode
-            print("Connected to ESP32 (SPP)!")
+            logger.info("Connected to ESP32 (SPP)!")
 
             while True:
                 # Example: Send a heartbeat or data
@@ -121,7 +48,7 @@ def connect_and_send():
                     
                     # If you don't receive data, the script won't know the 
                     # socket is dead until the next .send() call fails.
-                    time.sleep(4)
+                    time.sleep(4 + random.randint(0, 200) / 1000)
 
         except socket.error as e:
             logger.error(f"Connection Lost: {e}")
@@ -136,7 +63,6 @@ def connect_and_send():
             break
 
 if __name__ == "__main__":
-    # Запускаємо потік для введення як "daemon", щоб він закрився разом з програмою
     t = threading.Thread(target=input_thread, daemon=True)
     t.start()
 
