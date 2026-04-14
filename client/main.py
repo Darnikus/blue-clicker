@@ -1,7 +1,6 @@
-import socket
 import time
 import logging
-from secrets import server_address, port
+from bluetooth_driver import BluetoothDriver
 
 import threading
 import random
@@ -28,38 +27,30 @@ def input_thread():
 
 
 def connect_and_send():
-    while True:
-        sock = None
-        try:
-            print(f"--- Attempting connection to {server_address} ---")
-            sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-            sock.settimeout(5) # Don't hang forever on connect
-            sock.connect((server_address, port))
-            sock.settimeout(None) # Go back to blocking mode
-            logger.info("Connected to ESP32 (SPP)!")
+    sock: BluetoothDriver = BluetoothDriver()
 
+    last_heartbeat = time.time()
+    while True:
+        try:
             while True:
-                # Example: Send a heartbeat or data
                 message = "a"
                 if sending_flag:
-                    sock.send(message.encode('utf-8'))
-                    # print(f"Time:{datetime.datetime.now()},  Sent: {message}")
-                    logger.info(f"Sent: {message}")
+                    if not sock.send_data(message):
+                        logger.error("Could not send data. Waiting for next cycle...")
+                        time.sleep(3)
+                        continue
                     
                     # If you don't receive data, the script won't know the 
                     # socket is dead until the next .send() call fails.
                     time.sleep(4 + random.randint(0, 200) / 1000)
+                
+                elif time.time() - last_heartbeat > 5:
+                    sock.send_data('\n')
+                    last_heartbeat = time.time()
 
-        except socket.error as e:
-            logger.error(f"Connection Lost: {e}")
-            logger.error("Waiting 3 seconds before retrying...")
-            if sock:
-                sock.close()
-            time.sleep(3)
         except KeyboardInterrupt:
             logger.error("\nUser stopped script.")
-            if sock:
-                sock.close()
+            sock.disconnect()
             break
 
 if __name__ == "__main__":
