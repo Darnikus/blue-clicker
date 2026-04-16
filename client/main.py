@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Get a logger instance
 logger = logging.getLogger(__name__)
 
-async def input_thread():
+async def input_thread() -> None:
     global sending_flag
     loop = asyncio.get_running_loop()
 
@@ -29,13 +29,13 @@ async def input_thread():
             print("--- SENDING RESUMED ---")
 
 
-async def connect_and_send(sock: BluetoothDriver) -> None:
+async def connect_and_send(driver: BluetoothDriver) -> None:
     last_heartbeat = time.time()
     while True:
         try:
             message = "a"
             if sending_flag:
-                if not await sock.send_data(message):
+                if not await driver.send_data(message):
                     logger.error("Could not send data. Waiting for next cycle...")
                     await asyncio.sleep(3)
                     continue
@@ -45,31 +45,31 @@ async def connect_and_send(sock: BluetoothDriver) -> None:
                 await asyncio.sleep(4 + random.randint(0, 200) / 1000)
             
             elif time.time() - last_heartbeat > 5:
-                await sock.send_data('\n')
+                await driver.send_data('\n')
                 last_heartbeat = time.time()
 
                 await asyncio.sleep(0.1)
 
         except KeyboardInterrupt:
             logger.error("\nUser stopped script.")
-            sock.disconnect()
+            driver.disconnect()
             break
 
-async def main():
-    sock: BluetoothDriver = BluetoothDriver()
+async def main() -> None:
+    driver: BluetoothDriver = BluetoothDriver()
 
-    if not await sock.connect():
+    if not await driver.connect():
         logger.exception("Initial connection failed. Driver will try to reconnect later.")
 
     try:
         await asyncio.gather(
             input_thread(),
-            connect_and_send(sock)
+            connect_and_send(driver)
         )
     except asyncio.CancelledError:
         pass
     finally:
-        sock.disconnect()
+        driver.disconnect()
 
 
 if __name__ == "__main__":

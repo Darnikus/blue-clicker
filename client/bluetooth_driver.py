@@ -10,8 +10,8 @@ class BluetoothDriver:
 
     def __init__(self) -> None:
         self._sock: socket.socket | None = None
-        self.reader = None
-        self.writer = None
+        self._reader = None
+        self._writer = None
 
     async def connect(self) -> bool:
         self.disconnect()
@@ -28,7 +28,7 @@ class BluetoothDriver:
                 timeout=10.0
             ) 
             
-            self.reader, self.writer = await asyncio.open_connection(sock=self._sock)
+            self._reader, self._writer = await asyncio.open_connection(sock=self._sock)
             logger.info("Connected to ESP32 (SPP)!")
             return True
         except Exception:
@@ -38,8 +38,8 @@ class BluetoothDriver:
 
     def disconnect(self) -> None:
         """Save socket disconnect and close"""
-        if self.writer:
-            self.writer.close()
+        if self._writer:
+            self._writer.close()
         
         if self._sock:
             try:
@@ -48,20 +48,21 @@ class BluetoothDriver:
                 pass
             
             self._sock.close()
-            self._sock = None
-            self.reader = None
-            self.writer = None
-            logger.info('Connection is closed.')
+        
+        self._reader = None
+        self._writer = None
+        self._sock = None 
+        logger.info('Connection is closed.')
 
     
     async def send_data(self, data: str) -> bool:
-        if not self.writer or self.writer.is_closing():
+        if not self._writer or self._writer.is_closing():
             logger.error("There is not connection.")
             if not await self.connect():
                 return False
         try:
-            self.writer.write(data.encode('utf-8'))
-            await self.writer.drain()
+            self._writer.write(data.encode('utf-8'))
+            await self._writer.drain()
             logger.info(f"Sent: {data}")
             return True
         except Exception:
