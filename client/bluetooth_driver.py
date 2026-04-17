@@ -10,8 +10,8 @@ class BluetoothDriver:
 
     def __init__(self) -> None:
         self._sock: socket.socket | None = None
-        self._reader = None
-        self._writer = None
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
 
     async def connect(self) -> bool:
         self.disconnect()
