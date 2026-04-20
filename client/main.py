@@ -47,8 +47,10 @@ async def connect_and_send(driver: BluetoothDriver) -> None:
             elif time.time() - last_heartbeat > 5:
                 await driver.send_data('\n')
                 last_heartbeat = time.time()
-
                 await asyncio.sleep(0.1)
+            
+            else:
+                await asyncio.sleep(0.01)
 
         except KeyboardInterrupt:
             logger.error("\nUser stopped script.")
