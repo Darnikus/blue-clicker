@@ -10,7 +10,7 @@ from prompt_toolkit.widgets import TextArea
 
 from bluetooth_driver import BluetoothDriver
 
-logging.getLogger().setLevel(logging.INFO)
+
 logger = logging.getLogger(__name__)
 
 class TextAreaHandler(logging.Handler):
@@ -50,7 +50,18 @@ class SessionShell():
             multiline=False,
             wrap_lines=False
         )
-        logging.getLogger().addHandler(TextAreaHandler(self._log_field))
+
+        # Logger configuration
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        
+        ui_handler = TextAreaHandler(self._log_field)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        ui_handler.setFormatter(formatter)
+        root_logger.addHandler(ui_handler)
+       
         self._input_field.accept_handler = self._handle_command
 
         # UI Container
@@ -116,6 +127,3 @@ class SessionShell():
                 logger.error("\nUser stopped script.")
                 driver.disconnect()
                 break
-
-
-asyncio.run(SessionShell().run())
