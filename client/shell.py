@@ -1,129 +1,88 @@
 import asyncio
 import logging
 import random
-import time
-from prompt_toolkit.application import Application
-from prompt_toolkit.filters import Condition
-from prompt_toolkit.layout.containers import ConditionalContainer, HSplit, VerticalAlign
-from prompt_toolkit.layout.layout import Layout
-from prompt_toolkit.widgets import TextArea
+
+from textual.app import App, ComposeResult
+from textual.widgets import Footer, Header, Log
 
 from bluetooth_driver import BluetoothDriver
 
-
 logger = logging.getLogger(__name__)
 
-class TextAreaHandler(logging.Handler):
-    """Sends logs to UI widget instead of stdout"""
-    
-    def __init__(self, text_area: TextArea) -> None:
+
+class _TextualLogHandler(logging.Handler):
+    def __init__(self, log_widget: Log) -> None:
         super().__init__()
-        self._text_area = text_area
-    
+
+        self._log_widget: Log = log_widget
+
     def emit(self, record: logging.LogRecord) -> None:
         message = self.format(record)
 
-        if self._text_area.text == "":
-            self._text_area.text = message
-        else:
-            self._text_area.text += "\n" + message
+        self._log_widget.app.call_next(self._log_widget.write_line, message)
 
-        # Auto-scroll
-        self._text_area.buffer.cursor_position = len(self._text_area.text)
 
-class SessionShell():
-    
-    def __init__(self) -> None:
-        #TODO Move it to Manager class maybe
-        self.sending_flag: bool = False
+class BlueClickerApp(App):
+    def __init__(self, driver: BluetoothDriver) -> None:
+        super().__init__()
 
-        # Widjets
-        self._log_field: TextArea = TextArea(
-            read_only=True,
-            scrollbar=False,
-            height=None,
-            dont_extend_height=True
-        )
-        self._input_field: TextArea = TextArea(
-            height=1,
-            prompt=">> ",
-            multiline=False,
-            wrap_lines=False
-        )
+        self._is_running: bool = True
+        self._sending_flag: bool = True
+        self._blu_driver: BluetoothDriver = driver
 
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Log(auto_scroll=True, id="log")
+        yield Footer()
+
+    def on_mount(self) -> None:
         # Logger configuration
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.INFO)
-        for handler in root_logger.handlers[:]:
-            root_logger.removeHandler(handler)
-        
-        ui_handler = TextAreaHandler(self._log_field)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        ui_handler.setFormatter(formatter)
-        root_logger.addHandler(ui_handler)
-       
-        self._input_field.accept_handler = self._handle_command
 
-        # UI Container
-        self._root_container: HSplit = HSplit([
-            ConditionalContainer(
-                content=self._log_field,
-                filter=Condition(lambda: len(self._log_field.text) > 0)
-            ),
-            self._input_field
-        ], align=VerticalAlign.TOP)
+        log_widget: Log = self.query_one("#log", Log)
+        handler = _TextualLogHandler(log_widget)
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
 
-        self._app: Application = Application(
-            layout=Layout(self._root_container, focused_element=self._input_field),
-            full_screen=False
-        )
+        root_logger.addHandler(handler)
 
-    def _handle_command(self, buffer):
-        command = self._input_field.text.strip().lower()
-        match command:
-            case "+":
-                self.sending_flag = True
-                logger.info("Sending Resumed")
-            case "-":
-                self.sending_flag = False
-                logger.info("Sending Paused")
-            case "exit":
-                self._app.exit()
-            case _:
-                logger.info(f"Printed {command} ")
-        
-        self._input_field.text = "" # This clears input field
-    
-    async def run(self):
-        await asyncio.gather(
-            self._app.run_async(),
-            self.send_message(BluetoothDriver())
-        )
+        self.background_task = self.run_worker(self._secure_send_startup())
 
-    async def send_message(self, driver: BluetoothDriver) -> None:
-        last_heartbeat = time.time()
-        while True:
-            try:
-                message = "a"
-                if self.sending_flag:
-                    if not await driver.send_data(message):
-                        logger.error("Could not send data. Waiting for next cycle...")
-                        await asyncio.sleep(3)
-                        continue
-                    
-                    # If you don't receive data, the script won't know the 
-                    # socket is dead until the next .send() call fails.
-                    await asyncio.sleep(4 + random.randint(0, 200) / 1000)
-                
-                elif time.time() - last_heartbeat > 5:
-                    await driver.send_data('\n')
-                    last_heartbeat = time.time()
-                    await asyncio.sleep(0.1)
-                
-                else:
-                    await asyncio.sleep(0.01)
+    async def _secure_send_startup(self) -> None:
+        """Gives Textual breathing room to render before hammering the socket."""
+        await asyncio.sleep(0.5)
+        await self._send_message()
 
-            except KeyboardInterrupt:
-                logger.error("\nUser stopped script.")
-                driver.disconnect()
-                break
+    def on_unmount(self) -> None:
+        logger.info("App shutting down. Signaling background tasks to stop...")
+
+        self._is_running = False
+        self._blu_driver.disconnect()
+        self.background_task.cancel()
+
+    async def _send_message(self) -> None:
+        last_heartbeat = asyncio.get_event_loop().time()
+
+        while self._is_running:
+            message = "a"
+            if self._sending_flag:
+                if not await self._blu_driver.send_data(message):
+                    logger.exception("Could not send data. Waiting for next cycle...")
+                    await asyncio.sleep(3)
+                    continue
+
+                # If you don't receive data, the script won't know the
+                # socket is dead until the next .send() call fails.
+                await asyncio.sleep(4 + random.randint(0, 200) / 1000)
+
+            elif asyncio.get_event_loop().time() - last_heartbeat > 5:
+                logger.info("Sending heartbeat")
+                await self._blu_driver.send_data("\n")
+                last_heartbeat = asyncio.get_event_loop().time()
+                await asyncio.sleep(0.1)
+
+            else:
+                await asyncio.sleep(0.01)
+
+        self._blu_driver.disconnect()
