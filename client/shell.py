@@ -3,6 +3,7 @@ import logging
 import random
 
 from textual.app import App, ComposeResult
+from textual.reactive import reactive
 from textual.widgets import Footer, Header, Log
 
 from bluetooth_driver import BluetoothDriver
@@ -23,12 +24,18 @@ class _TextualLogHandler(logging.Handler):
 
 
 class BlueClickerApp(App):
+    BINDINGS = [
+        ("p", "toggle_pause", "Pause sending"),
+        ("p", "toggle_resume", "Resume sending"),
+    ]
+
     def __init__(self, driver: BluetoothDriver) -> None:
         super().__init__()
 
         self._is_running: bool = True
-        self._sending_flag: bool = True
         self._blu_driver: BluetoothDriver = driver
+
+    sending_flag: reactive[bool] = reactive(False, bindings=True)
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -66,7 +73,7 @@ class BlueClickerApp(App):
 
         while self._is_running:
             message = "a"
-            if self._sending_flag:
+            if self.sending_flag:
                 if not await self._blu_driver.send_data(message):
                     logger.exception("Could not send data. Waiting for next cycle...")
                     await asyncio.sleep(3)
@@ -86,3 +93,22 @@ class BlueClickerApp(App):
                 await asyncio.sleep(0.01)
 
         self._blu_driver.disconnect()
+
+    def action_toggle_pause(self) -> None:
+        """An action to pause sending."""
+        self.sending_flag = False
+        logger.info("--- SENDING PAUSED ---")
+
+    def action_toggle_resume(self) -> None:
+        """An action to resume sending."""
+        self.sending_flag = True
+        logger.info("--- SENDING RESUMED ---")
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == "toggle_pause" and not self.sending_flag:
+            return False
+
+        if action == "toggle_resume" and self.sending_flag:
+            return False
+
+        return True
