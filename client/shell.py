@@ -7,20 +7,9 @@ from textual.reactive import reactive
 from textual.widgets import Footer, Header, Log
 
 from bluetooth_driver import BluetoothDriver
+from log_config import link_textual_ui
 
 logger = logging.getLogger(__name__)
-
-
-class _TextualLogHandler(logging.Handler):
-    def __init__(self, log_widget: Log) -> None:
-        super().__init__()
-
-        self._log_widget: Log = log_widget
-
-    def emit(self, record: logging.LogRecord) -> None:
-        message = self.format(record)
-
-        self._log_widget.app.call_next(self._log_widget.write_line, message)
 
 
 class BlueClickerApp(App):
@@ -43,16 +32,8 @@ class BlueClickerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        # Logger configuration
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
-
         log_widget: Log = self.query_one("#log", Log)
-        handler = _TextualLogHandler(log_widget)
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        handler.setFormatter(formatter)
-
-        root_logger.addHandler(handler)
+        link_textual_ui(log_widget)
 
         self.background_task = self.run_worker(self._secure_send_startup())
 

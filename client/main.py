@@ -1,13 +1,11 @@
-import logging
-
 from bluetooth_driver import BluetoothDriver
+from log_config import initialize_logging
 from shell import BlueClickerApp
-
-# Get a logger instance
-logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    initialize_logging()
+
     driver: BluetoothDriver = BluetoothDriver()
     app: BlueClickerApp = BlueClickerApp(driver)
 
