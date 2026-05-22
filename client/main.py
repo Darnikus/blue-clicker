@@ -1,6 +1,6 @@
+from app import BlueClickerApp
 from bluetooth_driver import BluetoothDriver
 from log_config import initialize_logging
-from shell import BlueClickerApp
 
 
 def main() -> None:
