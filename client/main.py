@@ -1,5 +1,6 @@
 from app import BlueClickerApp
 from bluetooth_driver import BluetoothDriver
+from key_manager import KeyManager
 from log_config import initialize_logging
 
 
@@ -7,7 +8,8 @@ def main() -> None:
     initialize_logging()
 
     driver: BluetoothDriver = BluetoothDriver()
-    app: BlueClickerApp = BlueClickerApp(driver)
+    key_manager = KeyManager(driver)
+    app: BlueClickerApp = BlueClickerApp(key_manager)
 
     app.run()
 
