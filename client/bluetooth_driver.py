@@ -10,31 +10,6 @@ class BluetoothDriver:
     def __init__(self) -> None:
         self._sock: socket.socket | None = None
 
-    async def _connect(self) -> bool:
-        # Offload the entire blocking connection to a thread
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self._sync_connect)
-
-    def _sync_connect(self) -> bool:
-        """Internal synchronous connection method run inside the executor thread."""
-        self.disconnect()
-        logger.info(f"--- Attempting connection to {server_address} ---")
-
-        try:
-            self._sock = socket.socket(
-                socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM
-            )
-            self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self._sock.settimeout(10.0)  # 10-second timeout for the connection block
-
-            self._sock.connect((server_address, port))
-            logger.info("Connected to ESP32 (SPP)!")
-            return True
-        except Exception:
-            logger.exception("Failed to connect.")
-            self.disconnect()
-            return False
-
     def disconnect(self) -> None:
         """Save socket disconnect and close"""
         if self._sock:
@@ -62,6 +37,31 @@ class BluetoothDriver:
             return True
         except Exception:
             logger.exception(f"Failed to send: {data}. Performing disconnection.")
+            self.disconnect()
+            return False
+
+    async def _connect(self) -> bool:
+        # Offload the entire blocking connection to a thread
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync_connect)
+
+    def _sync_connect(self) -> bool:
+        """Internal synchronous connection method run inside the executor thread."""
+        self.disconnect()
+        logger.info(f"--- Attempting connection to {server_address} ---")
+
+        try:
+            self._sock = socket.socket(
+                socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM
+            )
+            self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self._sock.settimeout(10.0)  # 10-second timeout for the connection block
+
+            self._sock.connect((server_address, port))
+            logger.info("Connected to ESP32 (SPP)!")
+            return True
+        except Exception:
+            logger.exception("Failed to connect.")
             self.disconnect()
             return False
 
