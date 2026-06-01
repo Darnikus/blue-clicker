@@ -1,9 +1,10 @@
 import logging
 
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Grid
 from textual.reactive import reactive
-from textual.widgets import DataTable, Footer, Header, Log
+from textual.screen import ModalScreen
+from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Log
 
 from key_manager import KeyManager
 from log_config import link_textual_ui
@@ -11,10 +12,33 @@ from log_config import link_textual_ui
 logger = logging.getLogger(__name__)
 
 
+class AddKeyScreen(ModalScreen[tuple[str, str]]):
+    """Screen with a dialog to add key and interval"""
+
+    def compose(self) -> ComposeResult:
+        yield Grid(
+            Label("Add key label (print something here later)", id="label"),
+            Input(placeholder="Key", id="key-input", max_length=1),
+            Input(placeholder="Interval (sec)", id="interval-input", type="number"),
+            Button("Add", variant="success", id="add-button"),
+            Button("Cancel", variant="primary", id="cancel-button"),
+            id="add-dialog",
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "add-button":
+            key = self.query_one("#key-input", Input).value
+            interval = self.query_one("#interval-input", Input).value
+            self.dismiss((key, interval))
+        else:
+            self.app.pop_screen()
+
+
 class BlueClickerApp(App):
     BINDINGS = [
         ("p", "toggle_pause", "Pause sending"),
         ("p", "toggle_resume", "Resume sending"),
+        ("a", "add_key", "Add key"),
     ]
     CSS_PATH = "blueclicker.tcss"
 
@@ -38,10 +62,7 @@ class BlueClickerApp(App):
 
         data_table = self.query_one(DataTable)
         data_table.cursor_type = "row"
-        data_table.add_columns("Key", "Interval")
-
-        # TODO Delete next line in next commit
-        data_table.add_row(self._key_manager._key, self._key_manager._interval)
+        data_table.add_columns("Key", "Interval (sec)")
 
         self._background_task = self.run_worker(self._key_manager.start_sending())
 
@@ -60,6 +81,25 @@ class BlueClickerApp(App):
         """An action to resume sending."""
         self.sending_flag = True
         self._key_manager.toggle_pause(self.sending_flag)
+
+    def action_add_key(self) -> None:
+        """An action to display the add key dialog."""
+
+        def get_result(result: tuple[str, str] | None):
+            """Called when AddKeyScreen is dismissed."""
+            if result is None:
+                logger.exception(
+                    "AddKeyScreen was dismissed without submitting key and interval"
+                )
+                return
+
+            key, interval = result
+            self.query_one(DataTable).add_row(key, interval)
+            self._key_manager.key = key
+            self._key_manager.interval = float(interval)
+            logger.info(f"Added key: {key} with interval: {interval} sec")
+
+        self.push_screen(AddKeyScreen(), get_result)
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "toggle_pause" and not self.sending_flag:

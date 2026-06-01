@@ -14,7 +14,23 @@ class KeyManager:
         self._is_running: bool = True
 
         self._key: str = "a"
-        self._interval: int = 4
+        self._interval: float = 4
+
+    @property
+    def key(self) -> str:
+        return self._key
+
+    @key.setter
+    def key(self, new_key: str):
+        self._key = new_key
+
+    @property
+    def interval(self) -> float:
+        return self._interval
+
+    @interval.setter
+    def interval(self, new_interval: float):
+        self._interval = new_interval
 
     async def start_sending(self) -> None:
         """Gives Textual breathing room to render before hammering the socket."""
