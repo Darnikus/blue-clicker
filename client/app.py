@@ -4,6 +4,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, Grid
 from textual.reactive import reactive
 from textual.screen import ModalScreen
+from textual.validation import Length, Number
 from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Log
 
 from key_manager import KeyManager
@@ -17,19 +18,59 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
 
     def compose(self) -> ComposeResult:
         yield Grid(
-            Label("Add key label (print something here later)", id="label"),
-            Input(placeholder="Key", id="key-input", max_length=1),
-            Input(placeholder="Interval (sec)", id="interval-input", type="number"),
+            Label("Write a key and an interval in seconds", id="label"),
+            Input(
+                placeholder="Key",
+                id="key-input",
+                max_length=1,
+                validators=[
+                    Length(
+                        minimum=1, maximum=1, failure_description="Key cannot be empty"
+                    )
+                ],
+            ),
+            Input(
+                placeholder="Interval (sec)",
+                id="interval-input",
+                type="number",
+                validators=[
+                    Number(minimum=0.1, failure_description="Must be greater than 0")
+                ],
+            ),
+            Label("", id="key-error", classes="error"),
+            Label("", id="interval-error", classes="error"),
             Button("Add", variant="success", id="add-button"),
             Button("Cancel", variant="primary", id="cancel-button"),
             id="add-dialog",
         )
 
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Updates and toggles the error labels as the user types."""
+        if not event.input or not event.input.id:
+            return
+
+        error_label_id = f"#{event.input.id[:-6]}-error"
+        error_label = self.query_one(error_label_id, Label)
+
+        if event.validation_result and not event.validation_result.is_valid:
+            error_label.update(event.validation_result.failure_descriptions[0])
+            error_label.remove_class("hidden")
+        else:
+            error_label.add_class("hidden")
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "add-button":
-            key = self.query_one("#key-input", Input).value
-            interval = self.query_one("#interval-input", Input).value
-            self.dismiss((key, interval))
+            key_input = self.query_one("#key-input", Input)
+            interval_input = self.query_one("#interval-input", Input)
+
+            key_input.validate(key_input.value)
+            interval_input.validate(interval_input.value)
+
+            if self.query("Input.-invalid"):
+                self.notify("Please fill out all fields correctly.", severity="error")
+            else:
+                self.dismiss((key_input.value, interval_input.value))
+
         else:
             self.app.pop_screen()
 
