@@ -1,0 +1,15 @@
+#app-container {
+    layout: horizontal;
+    height: 100%;
+    width: 100%
+}
+
+#log {
+    height: 100%;
+    width: 75%;
+}
+
+#key-table {
+    height: 100%;
+    width: 25%;
+}

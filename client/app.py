@@ -1,8 +1,9 @@
 import logging
 
 from textual.app import App, ComposeResult
+from textual.containers import Container
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, Log
+from textual.widgets import DataTable, Footer, Header, Log
 
 from key_manager import KeyManager
 from log_config import link_textual_ui
@@ -15,6 +16,7 @@ class BlueClickerApp(App):
         ("p", "toggle_pause", "Pause sending"),
         ("p", "toggle_resume", "Resume sending"),
     ]
+    CSS_PATH = "blueclicker.tcss"
 
     def __init__(self, key_manager: KeyManager) -> None:
         super().__init__()
@@ -25,12 +27,21 @@ class BlueClickerApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Log(auto_scroll=True, id="log")
+        with Container(id="app-container"):
+            yield Log(auto_scroll=True, id="log")
+            yield DataTable(id="key-table")
         yield Footer()
 
     def on_mount(self) -> None:
         log_widget: Log = self.query_one("#log", Log)
         link_textual_ui(log_widget)
+
+        data_table = self.query_one(DataTable)
+        data_table.cursor_type = "row"
+        data_table.add_columns("Key", "Interval")
+
+        # TODO Delete next line in next commit
+        data_table.add_row(self._key_manager._key, self._key_manager._interval)
 
         self._background_task = self.run_worker(self._key_manager.start_sending())
 
