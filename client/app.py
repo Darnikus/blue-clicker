@@ -80,6 +80,7 @@ class BlueClickerApp(App):
         ("p", "toggle_pause", "Pause sending"),
         ("p", "toggle_resume", "Resume sending"),
         ("a", "add_key", "Add key"),
+        ("r", "remove_key", "Remove key"),
     ]
     CSS_PATH = "blueclicker.tcss"
 
@@ -148,11 +149,31 @@ class BlueClickerApp(App):
 
         self.push_screen(AddKeyScreen(), get_result)
 
+    def action_remove_key(self) -> None:
+        """An action to remove key and its interval"""
+        data_table = self.query_one(DataTable)
+        row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
+
+        logger.info(
+            f"Removed key: {self._key_manager.key} "
+            + f"with interval: {self._key_manager.interval} sec"
+        )
+        self._key_manager.key, self._key_manager.interval = None, None
+        data_table.remove_row(row_key)
+
+        # Tell Textual to re-run check_action method
+        self.refresh_bindings()
+
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "toggle_pause" and not self.sending_flag:
             return False
 
         if action == "toggle_resume" and self.sending_flag:
+            return False
+
+        if action == "remove_key" and (
+            self._key_manager.key is None or self._key_manager.interval is None
+        ):
             return False
 
         return True
