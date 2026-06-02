@@ -120,6 +120,12 @@ class BlueClickerApp(App):
 
     def action_toggle_resume(self) -> None:
         """An action to resume sending."""
+        if self._key_manager.key is None or self._key_manager.interval is None:
+            self.notify(
+                "Please add any key and its interval before resume.", severity="error"
+            )
+            return
+
         self.sending_flag = True
         self._key_manager.toggle_pause(self.sending_flag)
 

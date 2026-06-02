@@ -13,23 +13,23 @@ class KeyManager:
         self._is_not_paused: bool = False
         self._is_running: bool = True
 
-        self._key: str = "a"
-        self._interval: float = 4
+        self._key: str | None = None
+        self._interval: float | None = None
 
     @property
-    def key(self) -> str:
+    def key(self) -> str | None:
         return self._key
 
     @key.setter
-    def key(self, new_key: str):
+    def key(self, new_key: str | None):
         self._key = new_key
 
     @property
-    def interval(self) -> float:
+    def interval(self) -> float | None:
         return self._interval
 
     @interval.setter
-    def interval(self, new_interval: float):
+    def interval(self, new_interval: float | None):
         self._interval = new_interval
 
     async def start_sending(self) -> None:
@@ -50,14 +50,18 @@ class KeyManager:
 
         while self._is_running:
             if self._is_not_paused:
-                if not await self._driver.send_data(self._key):
+                if self.key is None or self.interval is None:
+                    logger.exception("Key and interval are unconfigured.")
+                    continue
+
+                if not await self._driver.send_data(self.key):
                     logger.exception("Could not send data. Waiting for next cycle...")
                     await asyncio.sleep(3)
                     continue
 
                 # If you don't receive data, the script won't know the
                 # socket is dead until the next .send() call fails.
-                await asyncio.sleep(self._interval + self._get_random_human_reaction())
+                await asyncio.sleep(self.interval + self._get_random_human_reaction())
 
             elif asyncio.get_event_loop().time() - last_heartbeat > 5:
                 logger.info("Sending heartbeat")
