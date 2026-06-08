@@ -46,8 +46,6 @@ class KeyManager:
         logger.info(f"--- SENDING {'RESUMED' if self._is_not_paused else 'PAUSED'} ---")
 
     async def _send_message(self) -> None:
-        last_heartbeat = asyncio.get_event_loop().time()
-
         while self._is_running:
             if self._is_not_paused:
                 if self.key is None or self.interval is None:
@@ -62,12 +60,6 @@ class KeyManager:
                 # If you don't receive data, the script won't know the
                 # socket is dead until the next .send() call fails.
                 await asyncio.sleep(self.interval + self._get_random_human_reaction())
-
-            elif asyncio.get_event_loop().time() - last_heartbeat > 5:
-                logger.info("Sending heartbeat")
-                await self._driver.send_data("\n")
-                last_heartbeat = asyncio.get_event_loop().time()
-                await asyncio.sleep(0.1)
 
             else:
                 await asyncio.sleep(0.01)
