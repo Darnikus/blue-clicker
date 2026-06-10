@@ -106,13 +106,13 @@ class BlueClickerApp(App):
         data_table.cursor_type = "row"
         data_table.add_columns("Key", "Interval (sec)")
 
-        self._background_task = self.run_worker(self._key_manager.start_sending())
+        # self._background_task = self.run_worker(self._key_manager.start_sending())
 
     def on_unmount(self) -> None:
         logger.info("App shutting down. Signaling background tasks to stop...")
 
-        self._key_manager.stop_sending()
-        self._background_task.cancel()
+        self._key_manager.shutdown()
+        # self._background_task.cancel()
 
     def action_toggle_pause(self) -> None:
         """An action to pause sending."""
@@ -142,9 +142,11 @@ class BlueClickerApp(App):
                 return
 
             key, interval = result
-            self.query_one(DataTable).add_row(key, interval)
+            row_key = self.query_one(DataTable).add_row(key, interval)
             self._key_manager.key = key
             self._key_manager.interval = float(interval)
+
+            self._key_manager.add_key(str(row_key), key, float(interval))
             logger.info(f"Added key: {key} with interval: {interval} sec")
 
         self.push_screen(AddKeyScreen(), get_result)
