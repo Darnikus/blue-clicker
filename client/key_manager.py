@@ -113,8 +113,7 @@ class KeyManager:
         key_task.stop()
 
         logger.info(
-            f"Removed key: {key_task.key} "
-            + f"with interval: {key_task.interval} sec"
+            f"Removed key: {key_task.key} with interval: {key_task.interval} sec"
         )
 
     def shutdown(self) -> None:
@@ -131,3 +130,7 @@ class KeyManager:
             key_task.toggle_pause(state)
 
         logger.info(f"--- SENDING {'RESUMED' if self._is_not_paused else 'PAUSED'} ---")
+
+    def is_duplicate(self, check_key: str) -> bool:
+        """Check if such key already exists"""
+        return any(task.key == check_key for task in self._active_tasks.values())

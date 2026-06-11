@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, Grid
@@ -15,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 class AddKeyScreen(ModalScreen[tuple[str, str]]):
     """Screen with a dialog to add key and interval"""
+
+    def __init__(self, is_duplicate_fn: Callable[[str], bool]) -> None:
+        super().__init__()
+        self._is_duplicate = is_duplicate_fn
 
     def compose(self) -> ComposeResult:
         yield Grid(
@@ -68,6 +73,8 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
 
             if self.query("Input.-invalid"):
                 self.notify("Please fill out all fields correctly.", severity="error")
+            elif self._is_duplicate(key_input.value):
+                self.notify(f"'{key_input.value}' already exists!", severity="warning")
             else:
                 self.dismiss((key_input.value, interval_input.value))
 
@@ -149,7 +156,9 @@ class BlueClickerApp(App):
             self._key_manager.add_key(str(row_key), key, float(interval))
             logger.info(f"Added key: {key} with interval: {interval} sec")
 
-        self.push_screen(AddKeyScreen(), get_result)
+        self.push_screen(
+            AddKeyScreen(is_duplicate_fn=self._key_manager.is_duplicate), get_result
+        )
 
     def action_remove_key(self) -> None:
         """An action to remove key and its interval"""
