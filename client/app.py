@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, Grid
@@ -15,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 class AddKeyScreen(ModalScreen[tuple[str, str]]):
     """Screen with a dialog to add key and interval"""
+
+    def __init__(self, is_duplicate_fn: Callable[[str], bool]) -> None:
+        super().__init__()
+
+        self._is_duplicate = is_duplicate_fn
 
     def compose(self) -> ComposeResult:
         yield Grid(
@@ -68,6 +74,8 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
 
             if self.query("Input.-invalid"):
                 self.notify("Please fill out all fields correctly.", severity="error")
+            elif self._is_duplicate(key_input.value):
+                self.notify(f"'{key_input.value}' already exists!", severity="warning")
             else:
                 self.dismiss((key_input.value, interval_input.value))
 
@@ -106,13 +114,13 @@ class BlueClickerApp(App):
         data_table.cursor_type = "row"
         data_table.add_columns("Key", "Interval (sec)")
 
-        self._background_task = self.run_worker(self._key_manager.start_sending())
+        # self._background_task = self.run_worker(self._key_manager.start_sending())
 
     def on_unmount(self) -> None:
         logger.info("App shutting down. Signaling background tasks to stop...")
 
-        self._key_manager.stop_sending()
-        self._background_task.cancel()
+        self._key_manager.shutdown()
+        # self._background_task.cancel()
 
     def action_toggle_pause(self) -> None:
         """An action to pause sending."""
@@ -121,7 +129,7 @@ class BlueClickerApp(App):
 
     def action_toggle_resume(self) -> None:
         """An action to resume sending."""
-        if self._key_manager.key is None or self._key_manager.interval is None:
+        if self._key_manager.has_active_tasks:
             self.notify(
                 "Please add any key and its interval before resume.", severity="error"
             )
@@ -142,23 +150,21 @@ class BlueClickerApp(App):
                 return
 
             key, interval = result
-            self.query_one(DataTable).add_row(key, interval)
-            self._key_manager.key = key
-            self._key_manager.interval = float(interval)
+            row_key = self.query_one(DataTable).add_row(key, interval)
+
+            self._key_manager.add_key(str(row_key), key, float(interval))
             logger.info(f"Added key: {key} with interval: {interval} sec")
 
-        self.push_screen(AddKeyScreen(), get_result)
+        self.push_screen(
+            AddKeyScreen(is_duplicate_fn=self._key_manager.is_duplicate), get_result
+        )
 
     def action_remove_key(self) -> None:
         """An action to remove key and its interval"""
         data_table = self.query_one(DataTable)
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
-        logger.info(
-            f"Removed key: {self._key_manager.key} "
-            + f"with interval: {self._key_manager.interval} sec"
-        )
-        self._key_manager.key, self._key_manager.interval = None, None
+        self._key_manager.remove_key(str(row_key))
         data_table.remove_row(row_key)
 
         # Tell Textual to re-run check_action method
@@ -171,9 +177,7 @@ class BlueClickerApp(App):
         if action == "toggle_resume" and self.sending_flag:
             return False
 
-        if action == "remove_key" and (
-            self._key_manager.key is None or self._key_manager.interval is None
-        ):
+        if action == "remove_key" and not self._key_manager.has_active_tasks:
             return False
 
         return True
