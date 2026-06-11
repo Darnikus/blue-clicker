@@ -77,7 +77,7 @@ class KeyManager:
         self._key: str | None = None
         self._interval: float | None = None
 
-        self.active_tasks: dict[str, KeyTask] = {}
+        self._active_tasks: dict[str, KeyTask] = {}
 
     @property
     def key(self) -> str | None:
@@ -95,20 +95,10 @@ class KeyManager:
     def interval(self, new_interval: float | None):
         self._interval = new_interval
 
-    def shutdown(self) -> None:
-        self._is_running = False
-
-        for key_task in self.active_tasks.values():
-            key_task.stop()
-
-        self._driver.disconnect()
-
-    def toggle_pause(self, state: bool) -> None:
-        self._is_not_paused = state
-        for key_task in self.active_tasks.values():
-            key_task.toggle_pause(state)
-
-        logger.info(f"--- SENDING {'RESUMED' if self._is_not_paused else 'PAUSED'} ---")
+    @property
+    def has_active_tasks(self) -> bool:
+        """Returns True if there is any active task"""
+        return bool(self._active_tasks)
 
     def add_key(self, task_id: str, key: str, interval: float) -> None:
         key_task = KeyTask(key, interval, self._driver)
@@ -116,4 +106,28 @@ class KeyManager:
             key_task.toggle_pause(self._is_not_paused)
 
         key_task.start()
-        self.active_tasks[task_id] = key_task
+        self._active_tasks[task_id] = key_task
+
+    def remove_key(self, task_id: str) -> None:
+        key_task = self._active_tasks.pop(task_id)
+        key_task.stop()
+
+        logger.info(
+            f"Removed key: {key_task.key} "
+            + f"with interval: {key_task.interval} sec"
+        )
+
+    def shutdown(self) -> None:
+        self._is_running = False
+
+        for key_task in self._active_tasks.values():
+            key_task.stop()
+
+        self._driver.disconnect()
+
+    def toggle_pause(self, state: bool) -> None:
+        self._is_not_paused = state
+        for key_task in self._active_tasks.values():
+            key_task.toggle_pause(state)
+
+        logger.info(f"--- SENDING {'RESUMED' if self._is_not_paused else 'PAUSED'} ---")

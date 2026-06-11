@@ -156,11 +156,8 @@ class BlueClickerApp(App):
         data_table = self.query_one(DataTable)
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
-        logger.info(
-            f"Removed key: {self._key_manager.key} "
-            + f"with interval: {self._key_manager.interval} sec"
-        )
         self._key_manager.key, self._key_manager.interval = None, None
+        self._key_manager.remove_key(str(row_key))
         data_table.remove_row(row_key)
 
         # Tell Textual to re-run check_action method
@@ -173,9 +170,7 @@ class BlueClickerApp(App):
         if action == "toggle_resume" and self.sending_flag:
             return False
 
-        if action == "remove_key" and (
-            self._key_manager.key is None or self._key_manager.interval is None
-        ):
+        if action == "remove_key" and not self._key_manager.has_active_tasks:
             return False
 
         return True
