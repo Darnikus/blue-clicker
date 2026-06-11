@@ -19,6 +19,7 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
 
     def __init__(self, is_duplicate_fn: Callable[[str], bool]) -> None:
         super().__init__()
+
         self._is_duplicate = is_duplicate_fn
 
     def compose(self) -> ComposeResult:
@@ -128,7 +129,7 @@ class BlueClickerApp(App):
 
     def action_toggle_resume(self) -> None:
         """An action to resume sending."""
-        if self._key_manager.key is None or self._key_manager.interval is None:
+        if self._key_manager.has_active_tasks:
             self.notify(
                 "Please add any key and its interval before resume.", severity="error"
             )
@@ -150,8 +151,6 @@ class BlueClickerApp(App):
 
             key, interval = result
             row_key = self.query_one(DataTable).add_row(key, interval)
-            self._key_manager.key = key
-            self._key_manager.interval = float(interval)
 
             self._key_manager.add_key(str(row_key), key, float(interval))
             logger.info(f"Added key: {key} with interval: {interval} sec")
@@ -165,7 +164,6 @@ class BlueClickerApp(App):
         data_table = self.query_one(DataTable)
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
-        self._key_manager.key, self._key_manager.interval = None, None
         self._key_manager.remove_key(str(row_key))
         data_table.remove_row(row_key)
 

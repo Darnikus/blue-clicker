@@ -71,29 +71,9 @@ class KeyTask:
 class KeyManager:
     def __init__(self, driver: BluetoothDriver) -> None:
         self._driver: BluetoothDriver = driver
+
         self._is_not_paused: bool = False
-        self._is_running: bool = True
-
-        self._key: str | None = None
-        self._interval: float | None = None
-
         self._active_tasks: dict[str, KeyTask] = {}
-
-    @property
-    def key(self) -> str | None:
-        return self._key
-
-    @key.setter
-    def key(self, new_key: str | None):
-        self._key = new_key
-
-    @property
-    def interval(self) -> float | None:
-        return self._interval
-
-    @interval.setter
-    def interval(self, new_interval: float | None):
-        self._interval = new_interval
 
     @property
     def has_active_tasks(self) -> bool:
@@ -117,8 +97,6 @@ class KeyManager:
         )
 
     def shutdown(self) -> None:
-        self._is_running = False
-
         for key_task in self._active_tasks.values():
             key_task.stop()
 
