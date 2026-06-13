@@ -25,7 +25,9 @@ def initialize_logging() -> None:
 
 def link_textual_ui(log_widget: Log):
     handler = _TextualLogHandler(log_widget)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] (%(module)s) -> %(message)s"
+    ) # Old format "%(asctime)s - %(levelname)s - %(message)s"
     handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
