@@ -112,9 +112,10 @@ class BlueClickerApp(App):
 
         data_table = self.query_one(DataTable)
         data_table.cursor_type = "row"
-        data_table.add_columns("Key", "Interval (sec)")
+        data_table.add_columns("Key", "Interval (sec)", "Priority")
 
         # self._background_task = self.run_worker(self._key_manager.start_sending())
+        self._key_manager.start()
 
     def on_unmount(self) -> None:
         logger.info("App shutting down. Signaling background tasks to stop...")
@@ -129,7 +130,7 @@ class BlueClickerApp(App):
 
     def action_toggle_resume(self) -> None:
         """An action to resume sending."""
-        if self._key_manager.has_active_tasks:
+        if not self._key_manager.has_active_tasks:
             self.notify(
                 "Please add any key and its interval before resume.", severity="error"
             )
@@ -150,7 +151,7 @@ class BlueClickerApp(App):
                 return
 
             key, interval = result
-            row_key = self.query_one(DataTable).add_row(key, interval)
+            row_key = self.query_one(DataTable).add_row(key, interval, 5)
 
             self._key_manager.add_key(str(row_key), key, float(interval))
             logger.info(f"Added key: {key} with interval: {interval} sec")
