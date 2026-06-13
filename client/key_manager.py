@@ -13,35 +13,32 @@ class KeyTask:
         self,
         key: str,
         interval: float,
-        driver: BluetoothDriver,
         key_queue: asyncio.PriorityQueue,
     ) -> None:
         self.key: str = key
         self.interval: float = interval
-        self.priority: int = 5  # TODO Add to init and remove driver
+        self._priority: int = 5  # TODO Add to init
         self._key_queue: asyncio.PriorityQueue[PrioritizedKey] = key_queue
 
-        self.task: asyncio.Task | None = None
+        self._task: asyncio.Task | None = None
 
         self._is_not_paused: bool = False
         self._is_running: bool = False
 
-        self._driver = driver
-
     def start(self) -> None:
-        if self.task and not self.task.done():
+        if self._task and not self._task.done():
             logger.error(f"Task for key: {self.key} is already running.")
             return
 
         self._is_running = True
         loop = asyncio.get_running_loop()
-        self.task = loop.create_task(self._run_loop())
+        self._task = loop.create_task(self._run_loop())
         logger.info(f"Started loop task for key: {self.key}")
 
     def stop(self) -> None:
         self._is_running = False
-        if self.task and not self.task.done():
-            self.task.cancel()
+        if self._task and not self._task.done():
+            self._task.cancel()
 
     def toggle_pause(self, state: bool) -> None:
         self._is_not_paused = state
@@ -54,14 +51,7 @@ class KeyTask:
                         logger.exception("Key and interval are unconfigured.")
                         continue
 
-                    # if not await self._driver.send_data(self.key):
-                    #     logger.exception(
-                    #         "Could not send data. Waiting for next cycle..."
-                    #     )
-                    #     await asyncio.sleep(3)
-                    #     continue
-
-                    item = PrioritizedKey(priority=self.priority, key=self.key)
+                    item = PrioritizedKey(priority=self._priority, key=self.key)
                     await self._key_queue.put(item)
 
                     # If you don't receive data, the script won't know the
@@ -97,7 +87,7 @@ class KeyManager:
         return bool(self._active_tasks)
 
     def add_key(self, task_id: str, key: str, interval: float) -> None:
-        key_task = KeyTask(key, interval, self._driver, self._send_queue)
+        key_task = KeyTask(key, interval, self._send_queue)
         if self._is_not_paused:
             key_task.toggle_pause(self._is_not_paused)
 
