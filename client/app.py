@@ -2,7 +2,7 @@ import logging
 from collections.abc import Callable
 
 from textual.app import App, ComposeResult
-from textual.containers import Container, Grid
+from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.validation import Length, Number
@@ -21,34 +21,56 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
         super().__init__()
 
         self._is_duplicate = is_duplicate_fn
+        self.current_priority: int = 5  # Start at 5
 
     def compose(self) -> ComposeResult:
-        yield Grid(
-            Label("Write a key and an interval in seconds", id="label"),
-            Input(
-                placeholder="Key",
-                id="key-input",
-                max_length=1,
-                validators=[
-                    Length(
-                        minimum=1, maximum=1, failure_description="Key cannot be empty"
-                    )
-                ],
-            ),
-            Input(
-                placeholder="Interval (sec)",
-                id="interval-input",
-                type="number",
-                validators=[
-                    Number(minimum=0.1, failure_description="Must be greater than 0")
-                ],
-            ),
-            Label("", id="key-error", classes="error"),
-            Label("", id="interval-error", classes="error"),
-            Button("Add", variant="success", id="add-button"),
-            Button("Cancel", variant="primary", id="cancel-button"),
-            id="add-dialog",
-        )
+        with Vertical(id="add-modal-dialog"):
+            yield Label("Write a key and an interval in seconds", id="label")
+            # Row 1
+            with Vertical(classes="input-group"):
+                yield Input(
+                    placeholder="Key",
+                    id="key-input",
+                    max_length=1,
+                    validators=[
+                        Length(
+                            minimum=1,
+                            maximum=1,
+                            failure_description="Key cannot be empty",
+                        )
+                    ],
+                )
+                yield Label("", id="key-error", classes="error hidden")
+
+            # Row 2: Interval
+            with Vertical(classes="input-group"):
+                yield Input(
+                    placeholder="Interval (sec)",
+                    id="interval-input",
+                    type="number",
+                    validators=[
+                        Number(
+                            minimum=0.1, failure_description="Must be greater than 0"
+                        )
+                    ],
+                )
+                yield Label("", id="interval-error", classes="error hidden")
+
+            # Row 3: Priority Tracker & Stepper
+            with Vertical(id="priority-group"):
+                with Horizontal(id="priority-header-row"):
+                    yield Label("Priority:", id="priority-title")
+                    yield Button("-", id="decrease-prio")
+                    yield Label("05", id="prio-display")
+                    yield Button("+", id="increase-prio")
+
+                # Crisp single line meter
+                yield Label("█" * 20, id="meter-bar")
+
+            # Row 4: Footer
+            with Container(id="bottom-container"):
+                yield Button("Add", variant="success", id="add-button")
+                yield Button("Cancel", variant="primary", id="cancel-button")
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Updates and toggles the error labels as the user types."""
@@ -65,7 +87,17 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
             error_label.add_class("hidden")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "add-button":
+        if event.button.id == "decrease-prio":
+            if self.current_priority > 1:
+                self.current_priority -= 1
+                self._update_priority_ui()
+
+        elif event.button.id == "increase-prio":
+            if self.current_priority < 10:
+                self.current_priority += 1
+                self._update_priority_ui()
+
+        elif event.button.id == "add-button":
             key_input = self.query_one("#key-input", Input)
             interval_input = self.query_one("#interval-input", Input)
 
@@ -79,8 +111,27 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
             else:
                 self.dismiss((key_input.value, interval_input.value))
 
-        else:
+        elif event.button.id == "cancel-button":
             self.app.pop_screen()
+
+    def _update_priority_ui(self) -> None:
+        """Sync the numeric label and the single-line meter width"""
+        prio_label = self.query_one("#prio-display", Label)
+        prio_label.update(f"{self.current_priority:02d}")
+
+        # At Priority 1: maximum blocks (40)
+        # At Prority 10: minimum blocks (6)
+        block_map = [40, 35, 30, 22, 20, 18, 16, 10, 8, 6]
+
+        meter = self.query_one("#meter-bar", Label)
+        meter.update("█" * block_map[self.current_priority - 1])
+
+        if self.current_priority <= 3:
+            meter.styles.color = "red"  # High
+        elif self.current_priority <= 7:
+            meter.styles.color = "orange"  # Moderate
+        else:
+            meter.styles.color = "gray"  # Low
 
 
 class BlueClickerApp(App):
