@@ -10,15 +10,12 @@ logger = logging.getLogger(__name__)
 
 class KeyTask:
     def __init__(
-        self,
-        key: str,
-        interval: float,
-        key_queue: asyncio.PriorityQueue,
+        self, key_queue: asyncio.PriorityQueue, key: str, interval: float, priority: int
     ) -> None:
+        self._key_queue: asyncio.PriorityQueue[PrioritizedKey] = key_queue
         self.key: str = key
         self.interval: float = interval
-        self._priority: int = 5  # TODO Add to init
-        self._key_queue: asyncio.PriorityQueue[PrioritizedKey] = key_queue
+        self._priority: int = priority
 
         self._task: asyncio.Task | None = None
 
@@ -86,8 +83,8 @@ class KeyManager:
         """Returns True if there is any active task"""
         return bool(self._active_tasks)
 
-    def add_key(self, task_id: str, key: str, interval: float) -> None:
-        key_task = KeyTask(key, interval, self._send_queue)
+    def add_key(self, task_id: str, key: str, interval: float, priority: int) -> None:
+        key_task = KeyTask(self._send_queue, key, interval, priority)
         if self._is_not_paused:
             key_task.toggle_pause(self._is_not_paused)
 

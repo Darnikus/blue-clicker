@@ -14,7 +14,7 @@ from log_config import link_textual_ui
 logger = logging.getLogger(__name__)
 
 
-class AddKeyScreen(ModalScreen[tuple[str, str]]):
+class AddKeyScreen(ModalScreen[tuple[str, str, int]]):
     """Screen with a dialog to add key and interval"""
 
     def __init__(self, is_duplicate_fn: Callable[[str], bool]) -> None:
@@ -109,7 +109,9 @@ class AddKeyScreen(ModalScreen[tuple[str, str]]):
             elif self._is_duplicate(key_input.value):
                 self.notify(f"'{key_input.value}' already exists!", severity="warning")
             else:
-                self.dismiss((key_input.value, interval_input.value))
+                self.dismiss(
+                    (key_input.value, interval_input.value, self.current_priority)
+                )
 
         elif event.button.id == "cancel-button":
             self.app.pop_screen()
@@ -163,7 +165,9 @@ class BlueClickerApp(App):
 
         data_table = self.query_one(DataTable)
         data_table.cursor_type = "row"
-        data_table.add_columns("Key", "Interval (sec)", "Priority")
+        columns = ("Key", "Interval (sec)", "Priority")
+        for name in columns:
+            data_table.add_column(name, key=name)
 
         # self._background_task = self.run_worker(self._key_manager.start_sending())
         self._key_manager.start()
@@ -193,7 +197,7 @@ class BlueClickerApp(App):
     def action_add_key(self) -> None:
         """An action to display the add key dialog."""
 
-        def get_result(result: tuple[str, str] | None):
+        def get_result(result: tuple[str, str, int] | None):
             """Called when AddKeyScreen is dismissed."""
             if result is None:
                 logger.exception(
@@ -201,11 +205,16 @@ class BlueClickerApp(App):
                 )
                 return
 
-            key, interval = result
-            row_key = self.query_one(DataTable).add_row(key, interval, 5)
+            key, interval, priority = result
+            data_table = self.query_one(DataTable)
+            row_key = data_table.add_row(key, interval, priority)
+            data_table.sort("Priority")
 
-            self._key_manager.add_key(str(row_key), key, float(interval))
-            logger.info(f"Added key: {key} with interval: {interval} sec")
+            self._key_manager.add_key(str(row_key), key, float(interval), priority)
+            logger.info(
+                f"Added key: {key} with interval: {interval} sec"
+                + f" and {priority} priority"
+            )
 
         self.push_screen(
             AddKeyScreen(is_duplicate_fn=self._key_manager.is_duplicate), get_result
