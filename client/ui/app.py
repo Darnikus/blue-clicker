@@ -5,9 +5,9 @@ from textual.containers import Container
 from textual.reactive import reactive
 from textual.widgets import DataTable, Footer, Header, Log
 
-from log_config import link_textual_ui
 from manager.key_manager import KeyManager
 from ui.add_key_screen import AddKeyScreen
+from utility.log_config import link_textual_ui
 
 logger = logging.getLogger(__name__)
 
