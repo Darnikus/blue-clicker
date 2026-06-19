@@ -1,4 +1,4 @@
-from bluetooth_driver import BluetoothDriver
+from driver.bluetooth_driver import BluetoothDriver
 from manager.key_manager import KeyManager
 from ui.app import BlueClickerApp
 from utility.log_config import initialize_logging

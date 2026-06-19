@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from bluetooth_driver import BluetoothDriver
+from driver.bluetooth_driver import BluetoothDriver
 from manager.key_task import KeyTask
 from manager.prioritized_key import PrioritizedKey
 
