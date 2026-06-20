@@ -5,7 +5,7 @@ from textual.validation import Number
 from textual.widgets import Button, Input, Label
 
 
-class EditKeyScreen(ModalScreen[tuple[float, int]]):
+class EditKeyScreen(ModalScreen[tuple[str, int]]):
     """Screen with a dialog to edit key's interval and priority"""
 
     # At Priority 1: maximum blocks (40)
@@ -90,11 +90,7 @@ class EditKeyScreen(ModalScreen[tuple[float, int]]):
             if self.query("Input.-invalid"):
                 self.notify("Please fill out all fields correctly.", severity="error")
             else:
-                ...
-                # self.dismiss(
-                #     (key_input.value, interval_input.value, self.current_priority)
-                # )
-                # TODO Add edit logic
+                self.dismiss((interval_input.value, self._priority))
 
         elif event.button.id == "cancel-button":
             self.app.pop_screen()

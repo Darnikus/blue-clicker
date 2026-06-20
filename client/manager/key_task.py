@@ -13,13 +13,35 @@ class KeyTask:
     ) -> None:
         self._key_queue: asyncio.PriorityQueue[PrioritizedKey] = key_queue
         self.key: str = key
-        self.interval: float = interval
+        self._interval: float = interval
         self._priority: int = priority
 
         self._task: asyncio.Task | None = None
 
         self._is_not_paused: bool = False
         self._is_running: bool = False
+
+    @property
+    def interval(self) -> float:
+        return self._interval
+
+    @interval.setter
+    def interval(self, new_interval: float) -> None:
+        # TODO Solve race condition with task cancel after taks creation
+        if self._interval != new_interval:
+            self.stop()
+            self._interval = new_interval
+            self.start()
+
+    @property
+    def priority(self) -> int:
+        return self._priority
+
+    @priority.setter
+    def priority(self, new_priority: int) -> None:
+        if new_priority < 1 or new_priority > 10:
+            raise ValueError("Priority cannot be smaller than 1 and bigger than 10")
+        self._priority = new_priority
 
     def start(self) -> None:
         if self._task and not self._task.done():
@@ -47,7 +69,7 @@ class KeyTask:
                         logger.exception("Key and interval are unconfigured.")
                         continue
 
-                    item = PrioritizedKey(priority=self._priority, key=self.key)
+                    item = PrioritizedKey(priority=self.priority, key=self.key)
                     await self._key_queue.put(item)
 
                     # If you don't receive data, the script won't know the

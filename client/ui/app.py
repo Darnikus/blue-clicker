@@ -103,8 +103,20 @@ class BlueClickerApp(App):
         data_table = self.query_one(DataTable)
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
+        def get_result(result: tuple[str, int] | None) -> None:
+            if result is None:
+                logger.exception(
+                    "EditKeyScreen was dismissed without submitting interval"
+                )
+                return
+
+            interval, priority = result
+            data_table.update_cell(row_key, "Interval (sec)", value=interval)
+            data_table.update_cell(row_key, "Priority", value=priority)
+            self._key_manager.edit_key(str(row_key), float(interval), priority)
+
         values = data_table.get_row(row_key)
-        self.push_screen(EditKeyScreen(*values))
+        self.push_screen(EditKeyScreen(*values), get_result)
 
     def action_remove_key(self) -> None:
         """An action to remove key and its interval"""
