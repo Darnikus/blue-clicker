@@ -114,3 +114,104 @@ AddKeyScreen {
         margin: 0 2;
     }
 }
+
+EditKeyScreen {
+    align: center middle;
+
+    #edit-modal-dialog {
+        width: 46;
+        height: auto;
+        border: solid $primary;
+        background: $panel;
+        padding: 1 2;
+    }
+
+    #label {
+        width: 100%;
+        margin: 0 0 1 0;
+        content-align: center middle;
+    }
+
+    .input-group {
+        width: 100%;
+        height: auto;
+        margin-bottom: 1;
+    }
+
+    .input-group Input {
+        width: 100%;
+    }
+
+    .error {
+        color: $error;
+        height: 1;
+        margin: 0 1 0 1;
+        padding-left: 3;
+        width: 100%;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    /* Priority Grouping */
+    #priority-group {
+        width: 100%;
+        height: auto;
+        margin-top: 1;
+    }
+
+    #priority-header-row {
+        width: 100%;
+        height: 3;
+        layout: horizontal;
+        align: left middle;
+    }
+
+    #priority-title {
+        width: auto;
+        height: 1;
+        text-style: bold;
+        color: $text-muted;
+        margin-right: 2;
+    }
+
+    #priority-header-row Button {
+        width: 5;
+        min-width: 0;
+        height: 1;
+        border: none;
+        background: $primary;
+        padding: 0;                   
+        margin: 0;                    
+        content-align: center middle;
+    }
+
+    #prio-display {
+        width: 4;
+        height: 1;
+        content-align: center middle;
+    }
+
+    /* The Single Line Meter */
+    #meter-bar {
+        width: 100%;       
+        background: $surface;
+        color: orange;
+        height: 1;
+        margin-top: 0;
+    }
+
+    /* Action Buttons */
+    #bottom-container {
+        width: 100%;       
+        height: auto;
+        margin-top: 2;
+        layout: horizontal;
+    }
+
+    #bottom-container Button {
+        width: 1fr;         
+        margin: 0 2;
+    }
+}

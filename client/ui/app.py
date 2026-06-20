@@ -7,6 +7,7 @@ from textual.widgets import DataTable, Footer, Header, Log
 
 from manager.key_manager import KeyManager
 from ui.add_key_screen import AddKeyScreen
+from ui.edit_key_screen import EditKeyScreen
 from utility.log_config import link_textual_ui
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class BlueClickerApp(App):
         ("p", "toggle_pause", "Pause sending"),
         ("p", "toggle_resume", "Resume sending"),
         ("a", "add_key", "Add key"),
+        ("e", "edit_key", "Edit key"),
         ("r", "remove_key", "Remove key"),
     ]
     CSS_PATH = "blueclicker.tcss"
@@ -96,6 +98,14 @@ class BlueClickerApp(App):
             AddKeyScreen(is_duplicate_fn=self._key_manager.is_duplicate), get_result
         )
 
+    def action_edit_key(self) -> None:
+        """An action to display the edit key screen."""
+        data_table = self.query_one(DataTable)
+        row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
+
+        values = data_table.get_row(row_key)
+        self.push_screen(EditKeyScreen(*values))
+
     def action_remove_key(self) -> None:
         """An action to remove key and its interval"""
         data_table = self.query_one(DataTable)
@@ -112,6 +122,9 @@ class BlueClickerApp(App):
             return False
 
         if action == "toggle_resume" and self.sending_flag:
+            return False
+
+        if action == "edit_key" and not self._key_manager.has_active_tasks:
             return False
 
         if action == "remove_key" and not self._key_manager.has_active_tasks:
