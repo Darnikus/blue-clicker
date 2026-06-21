@@ -34,7 +34,7 @@ class KeyManager:
 
     def edit_key(self, task_key: str, new_interval: float, new_priority: int) -> None:
         key_task = self._active_tasks[task_key]
-        # key_task.interval = new_interval
+        key_task.interval = new_interval
         key_task.priority = new_priority
 
     def remove_key(self, task_id: str) -> None:
@@ -93,6 +93,7 @@ class KeyManager:
                 self._send_queue.task_done()
 
                 # Tiny cooldown between consecutive sends
+                # todo change to 0.1
                 await asyncio.sleep(0.02)
 
         except asyncio.CancelledError:

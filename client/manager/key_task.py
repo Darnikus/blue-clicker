@@ -17,6 +17,7 @@ class KeyTask:
         self._priority: int = priority
 
         self._task: asyncio.Task | None = None
+        self._interval_change_event: asyncio.Event = asyncio.Event()
 
         self._is_not_paused: bool = False
         self._is_running: bool = False
@@ -27,11 +28,13 @@ class KeyTask:
 
     @interval.setter
     def interval(self, new_interval: float) -> None:
-        # TODO Solve race condition with task cancel after taks creation
         if self._interval != new_interval:
-            self.stop()
+            logger.info(
+                f"[{self.key}] Changing interval from {self.interval}s"
+                + f" to {new_interval}s."
+            )
             self._interval = new_interval
-            self.start()
+            self._interval_change_event.set()
 
     @property
     def priority(self) -> int:
@@ -57,6 +60,7 @@ class KeyTask:
         self._is_running = False
         if self._task and not self._task.done():
             self._task.cancel()
+        self._task = None
 
     def toggle_pause(self, state: bool) -> None:
         self._is_not_paused = state
@@ -72,11 +76,20 @@ class KeyTask:
                     item = PrioritizedKey(priority=self.priority, key=self.key)
                     await self._key_queue.put(item)
 
-                    # If you don't receive data, the script won't know the
-                    # socket is dead until the next .send() call fails.
-                    await asyncio.sleep(
-                        self.interval + self._get_random_human_reaction()
-                    )
+                    self._interval_change_event.clear()
+                    try:
+                        total_sleep = self.interval + self._get_random_human_reaction()
+
+                        # If you don't receive data, the script won't know the
+                        # socket is dead until the next .send() call fails.
+                        async with asyncio.timeout(total_sleep):
+                            await self._interval_change_event.wait()
+                            logger.info(
+                                f"[{self.key}] Interval change detected."
+                                + " Waking up to apply new setting."
+                            )
+                    except asyncio.TimeoutError:
+                        pass
 
                 else:
                     await asyncio.sleep(0.01)
