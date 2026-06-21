@@ -93,8 +93,7 @@ class KeyManager:
                 self._send_queue.task_done()
 
                 # Tiny cooldown between consecutive sends
-                # todo change to 0.1
-                await asyncio.sleep(0.02)
+                await asyncio.sleep(0.1)
 
         except asyncio.CancelledError:
             pass
