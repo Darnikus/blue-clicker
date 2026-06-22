@@ -65,6 +65,10 @@ class KeyTask:
     def toggle_pause(self, state: bool) -> None:
         self._is_not_paused = state
 
+    def to_dict(self) -> dict[str, str | float | int]:
+        """Return dict with key, interval and priority."""
+        return {"key": self.key, "interval": self.interval, "priority": self.priority}
+
     async def _run_loop(self) -> None:
         try:
             while self._is_running:
