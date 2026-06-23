@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+from pathlib import Path
 
 from driver.bluetooth_driver import BluetoothDriver
 from manager.key_task import KeyTask
@@ -44,6 +46,16 @@ class KeyManager:
         logger.info(
             f"Removed key: {key_task.key} with interval: {key_task.interval} sec"
         )
+
+    def save_keys_to_file(self, file_name: str, description: str) -> None:
+        json_profile = {
+            "description": description,
+            "keys": [key.to_dict() for key in self._active_tasks.values()],
+        }
+        path = Path(f"presets/{file_name}.json")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(json_profile, file, indent=4)
 
     def start(self) -> None:
         self._is_running = True
