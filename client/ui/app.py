@@ -147,4 +147,11 @@ class BlueClickerApp(App):
         return True
 
     def save_preset(self) -> None:
+        data_table = self.query_one(DataTable)
+
+        if data_table.row_count < 1:
+            self.notify(
+                "Cannot save: The table is currently empty.", severity="warning"
+            )
+            return
         logger.info("Saved preset")
