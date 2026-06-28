@@ -9,6 +9,7 @@ from manager.key_manager import KeyManager
 from ui.add_key_screen import AddKeyScreen
 from ui.edit_key_screen import EditKeyScreen
 from ui.save_preset_provider import SavePresetProvider
+from ui.save_preset_screen import SavePresetScreen
 from utility.log_config import link_textual_ui
 
 logger = logging.getLogger(__name__)
@@ -155,3 +156,5 @@ class BlueClickerApp(App):
             )
             return
         logger.info("Saved preset")
+
+        self.push_screen(SavePresetScreen())
