@@ -6,6 +6,8 @@ from textual.screen import ModalScreen
 from textual.validation import Length
 from textual.widgets import Button, Input, Label
 
+from ui.overwrite_screen import OverwriteScreen
+
 
 class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
     def __init__(self, file_exists_fn: Callable[[str], bool]) -> None:
@@ -78,6 +80,7 @@ class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
                 self.notify(
                     f"'{file_name_input.value}' already exists!", severity="warning"
                 )
+                self.app.push_screen(OverwriteScreen())
             else:
                 self.dismiss(
                     (

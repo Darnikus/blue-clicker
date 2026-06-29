@@ -268,3 +268,34 @@ SavePresetScreen {
         margin: 0 2;
     }
 }
+
+OverwriteScreen {
+    align: center middle;
+
+    #ovewrite-modal-dialog {
+        width: 46;
+        height: auto;
+        border: solid $primary;
+        background: $panel;
+        padding: 1 2;
+    }
+
+    #label {
+        width: 100%;
+        margin: 0 0 1 0;
+        content-align: center middle;
+    }
+
+    /* Action Buttons */
+    #bottom-container {
+        width: 100%;       
+        height: auto;
+        margin-top: 2;
+        layout: horizontal;
+    }
+
+    #bottom-container Button {
+        width: 1fr;         
+        margin: 0 2;
+    }
+}
