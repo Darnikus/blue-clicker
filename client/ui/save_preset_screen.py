@@ -5,23 +5,23 @@ from textual.validation import Length
 from textual.widgets import Button, Input, Label
 
 
-class SavePresetScreen(ModalScreen):
+class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
     def compose(self) -> ComposeResult:
         with Vertical(id="save-preset-modal-dialog"):
-            yield Label("Write a file name and a description", id="label")
-            # Row 1: File Name
+            yield Label("Write a filename and a description", id="label")
+            # Row 1: Filename
             with Vertical(classes="input-group"):
                 yield Input(
-                    placeholder="File Name",
-                    id="file-name-input",
+                    placeholder="Filename",
+                    id="filename-input",
                     validators=[
                         Length(
                             minimum=1,
-                            failure_description="File name cannot be empty",
+                            failure_description="Filename cannot be empty",
                         )
                     ],
                 )
-                yield Label("", id="file-name-error", classes="error hidden")
+                yield Label("", id="filename-error", classes="error hidden")
 
             # Row 2: Description
             with Vertical(classes="input-group"):
@@ -59,10 +59,10 @@ class SavePresetScreen(ModalScreen):
             self.app.pop_screen()
 
         elif event.button.id == "save-button":
-            filename_input = self.query_one("#file-name-input", Input)
+            file_name_input = self.query_one("#filename-input", Input)
             description_input = self.query_one("#description-input", Input)
 
-            filename_input.validate(filename_input.value)
+            file_name_input.validate(file_name_input.value)
             # description_input.validate(description_input.value)
 
             if self.query("Input.-invalid"):
@@ -74,7 +74,7 @@ class SavePresetScreen(ModalScreen):
             else:
                 self.dismiss(
                     (
-                        filename_input.value,
+                        file_name_input.value,
                         description_input.value,
                     )
                 )
