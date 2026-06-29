@@ -47,7 +47,7 @@ class KeyManager:
             f"Removed key: {key_task.key} with interval: {key_task.interval} sec"
         )
 
-    def save_keys_to_file(self, file_name: str, description: str) -> None:
+    def save_keys_to_file(self, file_name: str, description: str | None) -> None:
         json_profile = {
             "description": description,
             "keys": [key.to_dict() for key in self._active_tasks.values()],
@@ -56,6 +56,7 @@ class KeyManager:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as file:
             json.dump(json_profile, file, indent=4)
+        logger.info(f"Preset saved to '{file_name}.json'.")
 
     def start(self) -> None:
         self._is_running = True

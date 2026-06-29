@@ -155,6 +155,14 @@ class BlueClickerApp(App):
                 "Cannot save: The table is currently empty.", severity="warning"
             )
             return
-        logger.info("Saved preset")
 
-        self.push_screen(SavePresetScreen())
+        def get_result(result: tuple[str, str | None] | None) -> None:
+            match result:
+                case None:
+                    logger.exception(
+                        "SavePresetScreen was dismissed without submitting filename."
+                    )
+                case (file_name, description):
+                    self._key_manager.save_keys_to_file(file_name, description)
+
+        self.push_screen(SavePresetScreen(), get_result)
