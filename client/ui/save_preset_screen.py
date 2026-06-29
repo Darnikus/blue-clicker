@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
 from textual.screen import ModalScreen
@@ -6,6 +8,11 @@ from textual.widgets import Button, Input, Label
 
 
 class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
+    def __init__(self, file_exists_fn: Callable[[str], bool]) -> None:
+        super().__init__()
+
+        self._file_exists = file_exists_fn
+
     def compose(self) -> ComposeResult:
         with Vertical(id="save-preset-modal-dialog"):
             yield Label("Write a filename and a description", id="label")
@@ -67,10 +74,10 @@ class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
 
             if self.query("Input.-invalid"):
                 self.notify("Please fill out all fields correctly.", severity="error")
-            # elif self._is_duplicate(filename_input.value):
-            #     self.notify(
-            #         f"'{filename_input.value}' already exists!", severity="warning"
-            #     )
+            elif self._file_exists(file_name_input.value):
+                self.notify(
+                    f"'{file_name_input.value}' already exists!", severity="warning"
+                )
             else:
                 self.dismiss(
                     (

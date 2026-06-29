@@ -165,4 +165,7 @@ class BlueClickerApp(App):
                 case (file_name, description):
                     self._key_manager.save_keys_to_file(file_name, description)
 
-        self.push_screen(SavePresetScreen(), get_result)
+        self.push_screen(
+            SavePresetScreen(file_exists_fn=self._key_manager.file_exists),
+            get_result,
+        )

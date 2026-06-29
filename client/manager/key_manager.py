@@ -84,6 +84,10 @@ class KeyManager:
         """Check if such key already exists"""
         return any(task.key == check_key for task in self._active_tasks.values())
 
+    def file_exists(self, file_name: str) -> bool:
+        """Check if the preset already exists"""
+        return Path(f"presets/{file_name}.json").exists()
+
     async def _run_consumer_loop(self) -> None:
         """The single consumer worker that reads from the priority queue
         and sends data seuentially to the driver"""
