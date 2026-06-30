@@ -77,10 +77,20 @@ class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
             if self.query("Input.-invalid"):
                 self.notify("Please fill out all fields correctly.", severity="error")
             elif self._file_exists(file_name_input.value):
-                self.notify(
-                    f"'{file_name_input.value}' already exists!", severity="warning"
-                )
-                self.app.push_screen(OverwriteScreen())
+
+                def get_overwrite_choice(overwrite: bool | None) -> None:
+                    match overwrite:
+                        case True:
+                            self.dismiss(
+                                (
+                                    file_name_input.value,
+                                    description_input.value,
+                                )
+                            )
+                        case None | _:
+                            pass
+
+                self.app.push_screen(OverwriteScreen(), get_overwrite_choice)
             else:
                 self.dismiss(
                     (

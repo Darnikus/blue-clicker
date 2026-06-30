@@ -4,7 +4,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Label
 
 
-class OverwriteScreen(ModalScreen):
+class OverwriteScreen(ModalScreen[bool | None]):
     def compose(self) -> ComposeResult:
         with Vertical(id="ovewrite-modal-dialog"):
             yield Label(
@@ -15,3 +15,10 @@ class OverwriteScreen(ModalScreen):
             with Container(id="bottom-container"):
                 yield Button("Overwrite", variant="success", id="save-button")
                 yield Button("Cancel", variant="primary", id="cancel-button")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel-button":
+            self.app.pop_screen()
+
+        elif event.button.id == "save-button":
+            self.dismiss(True)
