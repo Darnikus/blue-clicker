@@ -215,3 +215,87 @@ EditKeyScreen {
         margin: 0 2;
     }
 }
+
+SavePresetScreen {
+    align: center middle;
+
+    #save-preset-modal-dialog {
+        width: 46;
+        height: auto;
+        border: solid $primary;
+        background: $panel;
+        padding: 1 2;
+    }
+
+    #label {
+        width: 100%;
+        margin: 0 0 1 0;
+        content-align: center middle;
+    }
+
+    .input-group {
+        width: 100%;
+        height: auto;
+        margin-bottom: 1;
+    }
+
+    .input-group Input {
+        width: 100%;
+    }
+
+    .error {
+        color: $error;
+        height: 1;
+        margin: 0 1 0 1;
+        padding-left: 3;
+        width: 100%;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    /* Action Buttons */
+    #bottom-container {
+        width: 100%;       
+        height: auto;
+        margin-top: 2;
+        layout: horizontal;
+    }
+
+    #bottom-container Button {
+        width: 1fr;         
+        margin: 0 2;
+    }
+}
+
+OverwriteScreen {
+    align: center middle;
+
+    #ovewrite-modal-dialog {
+        width: 46;
+        height: auto;
+        border: solid $primary;
+        background: $panel;
+        padding: 1 2;
+    }
+
+    #label {
+        width: 100%;
+        margin: 0 0 1 0;
+        content-align: center middle;
+    }
+
+    /* Action Buttons */
+    #bottom-container {
+        width: 100%;       
+        height: auto;
+        margin-top: 2;
+        layout: horizontal;
+    }
+
+    #bottom-container Button {
+        width: 1fr;         
+        margin: 0 2;
+    }
+}

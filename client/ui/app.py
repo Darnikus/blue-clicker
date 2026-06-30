@@ -8,6 +8,8 @@ from textual.widgets import DataTable, Footer, Header, Log
 from manager.key_manager import KeyManager
 from ui.add_key_screen import AddKeyScreen
 from ui.edit_key_screen import EditKeyScreen
+from ui.save_preset_provider import SavePresetProvider
+from ui.save_preset_screen import SavePresetScreen
 from utility.log_config import link_textual_ui
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,7 @@ class BlueClickerApp(App):
         ("e", "edit_key", "Edit key"),
         ("r", "remove_key", "Remove key"),
     ]
+    COMMANDS = App.COMMANDS | {SavePresetProvider}
     CSS_PATH = "blueclicker.tcss"
 
     def __init__(self, key_manager: KeyManager) -> None:
@@ -143,3 +146,26 @@ class BlueClickerApp(App):
             return False
 
         return True
+
+    def save_preset(self) -> None:
+        data_table = self.query_one(DataTable)
+
+        if data_table.row_count < 1:
+            self.notify(
+                "Cannot save: The table is currently empty.", severity="warning"
+            )
+            return
+
+        def get_result(result: tuple[str, str | None] | None) -> None:
+            match result:
+                case None:
+                    logger.exception(
+                        "SavePresetScreen was dismissed without submitting filename."
+                    )
+                case (file_name, description):
+                    self._key_manager.save_keys_to_file(file_name, description)
+
+        self.push_screen(
+            SavePresetScreen(file_exists_fn=self._key_manager.file_exists),
+            get_result,
+        )

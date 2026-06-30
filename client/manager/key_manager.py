@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+from pathlib import Path
 
 from driver.bluetooth_driver import BluetoothDriver
 from manager.key_task import KeyTask
@@ -45,6 +47,17 @@ class KeyManager:
             f"Removed key: {key_task.key} with interval: {key_task.interval} sec"
         )
 
+    def save_keys_to_file(self, file_name: str, description: str | None) -> None:
+        json_profile = {
+            "description": description,
+            "keys": [key.to_dict() for key in self._active_tasks.values()],
+        }
+        path = Path(f"presets/{file_name}.json")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(json_profile, file, indent=4)
+        logger.info(f"Preset saved to '{file_name}.json'.")
+
     def start(self) -> None:
         self._is_running = True
         loop = asyncio.get_running_loop()
@@ -70,6 +83,10 @@ class KeyManager:
     def is_duplicate(self, check_key: str) -> bool:
         """Check if such key already exists"""
         return any(task.key == check_key for task in self._active_tasks.values())
+
+    def file_exists(self, file_name: str) -> bool:
+        """Check if the preset already exists"""
+        return Path(f"presets/{file_name}.json").exists()
 
     async def _run_consumer_loop(self) -> None:
         """The single consumer worker that reads from the priority queue
