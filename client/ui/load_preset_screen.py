@@ -1,3 +1,5 @@
+import json
+
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -65,6 +67,10 @@ LoadPresetScreen {
         margin-left: 2;
     }
 
+    .hidden {
+        display: none;
+    }
+
 }
 """
 
@@ -73,26 +79,50 @@ LoadPresetScreen {
             yield DirectoryTree("./presets")
 
             with Vertical(id="main-panel"):
-                yield Label("📄 File: None", id="file-title")
-                yield Label(
-                    "Description: Choose a file from the tree view to pull dynamic layout presets. "
-                    "If this text gets incredibly long because of verbose notes, it automatically wraps "
-                    "gracefully onto new lines.",
-                    id="description-label",
-                )
+                yield Label("Select a file from the sidebar to begin", id="file-title")
+                yield Label(id="description-label")
 
                 yield DataTable()
 
                 with Horizontal(id="button-container"):
-                    yield Button("Load", variant="success", id="load-button")
+                    yield Button(
+                        "Load", variant="success", id="load-button", classes="hidden"
+                    )
                     yield Button("Cancel", variant="error", id="cancel-button")
 
     def on_mount(self) -> None:
-        table = self.query_one(DataTable)
-        table.cursor_type = "row"
-        table.add_columns("Key", "Interval (sec)", "Priority")
-        for i in range(10):  # Test data for ui
-            table.add_row(f"{i}", f"{i * 10}", "10")
+        self.query_one(DataTable).cursor_type = "row"
+
+    def on_directory_tree_file_selected(
+        self, event: DirectoryTree.FileSelected
+    ) -> None:
+        if event.path.suffix == ".json":
+            self.query_one("#file-title", Label).update(
+                f"📄 File: [u]{event.path.name}[/u]"
+            )
+
+            with open(event.path) as file:
+                data = json.load(file)
+
+            table = self.query_one(DataTable)
+            table.clear(columns=True)
+            load_button = self.query_one("#load-button", Button)
+
+            if data:
+                self.query_one("#description-label", Label).update(
+                    f"Description: {data['description']}"
+                )
+
+                columns = ("Key", "Interval (sec)", "Priority")
+                for name in columns:
+                    table.add_column(name, key=name)
+
+                for row in data["keys"]:
+                    table.add_row(*row.values())
+                table.sort("Priority")
+
+                if load_button.has_class("hidden"):
+                    load_button.remove_class("hidden")
 
 
 class TestApp(App):
