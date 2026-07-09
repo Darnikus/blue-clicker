@@ -8,6 +8,7 @@ from textual.widgets import DataTable, Footer, Header, Log
 from manager.key_manager import KeyManager
 from ui.add_key_screen import AddKeyScreen
 from ui.edit_key_screen import EditKeyScreen
+from ui.load_preset_provider import LoadPresetProvider
 from ui.save_preset_provider import SavePresetProvider
 from ui.save_preset_screen import SavePresetScreen
 from utility.log_config import link_textual_ui
@@ -23,7 +24,7 @@ class BlueClickerApp(App):
         ("e", "edit_key", "Edit key"),
         ("r", "remove_key", "Remove key"),
     ]
-    COMMANDS = App.COMMANDS | {SavePresetProvider}
+    COMMANDS = App.COMMANDS | {LoadPresetProvider, SavePresetProvider}
     CSS_PATH = "blueclicker.tcss"
 
     def __init__(self, key_manager: KeyManager) -> None:
@@ -146,6 +147,9 @@ class BlueClickerApp(App):
             return False
 
         return True
+
+    def load_preset(self) -> None:
+        logger.info("Preset is loaded")
 
     def save_preset(self) -> None:
         data_table = self.query_one(DataTable)
