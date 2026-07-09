@@ -93,6 +93,10 @@ LoadPresetScreen {
     def on_mount(self) -> None:
         self.query_one(DataTable).cursor_type = "none"
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel-button":
+            self.app.pop_screen()
+
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
