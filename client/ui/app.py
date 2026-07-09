@@ -9,6 +9,7 @@ from manager.key_manager import KeyManager
 from ui.add_key_screen import AddKeyScreen
 from ui.edit_key_screen import EditKeyScreen
 from ui.load_preset_provider import LoadPresetProvider
+from ui.load_preset_screen import LoadPresetScreen
 from ui.save_preset_provider import SavePresetProvider
 from ui.save_preset_screen import SavePresetScreen
 from utility.log_config import link_textual_ui
@@ -150,6 +151,7 @@ class BlueClickerApp(App):
 
     def load_preset(self) -> None:
         logger.info("Preset is loaded")
+        self.push_screen(LoadPresetScreen())
 
     def save_preset(self) -> None:
         data_table = self.query_one(DataTable)

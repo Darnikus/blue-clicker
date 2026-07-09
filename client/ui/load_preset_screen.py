@@ -91,7 +91,7 @@ LoadPresetScreen {
                     yield Button("Cancel", variant="error", id="cancel-button")
 
     def on_mount(self) -> None:
-        self.query_one(DataTable).cursor_type = "row"
+        self.query_one(DataTable).cursor_type = "none"
 
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
