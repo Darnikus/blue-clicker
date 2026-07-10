@@ -1,12 +1,20 @@
-import json
+from collections.abc import Callable
+from pathlib import Path
 
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, DirectoryTree, Label
 
+from manager.preview_preset import PreviewPreset
+
 
 class LoadPresetScreen(ModalScreen):
+    def __init__(self, file_preview_fn: Callable[[Path], PreviewPreset]) -> None:
+        super().__init__()
+
+        self._file_preview_callback = file_preview_fn
+
     def compose(self) -> ComposeResult:
         with Horizontal(id="load-modal-screen"):
             yield DirectoryTree("./presets")
@@ -38,37 +46,24 @@ class LoadPresetScreen(ModalScreen):
                 f"📄 File: [u]{event.path.name}[/u]"
             )
 
-            with open(event.path) as file:
-                data = json.load(file)
+            preview = self._file_preview_callback(event.path)
 
             table = self.query_one(DataTable)
             table.clear(columns=True)
             load_button = self.query_one("#load-button", Button)
 
-            if data:
+            if preview:
                 self.query_one("#description-label", Label).update(
-                    f"Description: {data['description']}"
+                    f"Description: {preview.description}"
                 )
 
                 columns = ("Key", "Interval (sec)", "Priority")
                 for name in columns:
                     table.add_column(name, key=name)
 
-                for row in data["keys"]:
+                for row in preview.keys:
                     table.add_row(*row.values())
                 table.sort("Priority")
 
                 if load_button.has_class("hidden"):
                     load_button.remove_class("hidden")
-
-
-class TestApp(App):
-    def compose(self) -> ComposeResult:
-        yield Button("Open Modal")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.push_screen(LoadPresetScreen())
-
-
-if __name__ == "__main__":
-    TestApp().run()

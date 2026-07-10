@@ -151,7 +151,9 @@ class BlueClickerApp(App):
 
     def load_preset(self) -> None:
         logger.info("Preset is loaded")
-        self.push_screen(LoadPresetScreen())
+        self.push_screen(
+            LoadPresetScreen(file_preview_fn=self._key_manager.get_file_preview)
+        )
 
     def save_preset(self) -> None:
         data_table = self.query_one(DataTable)

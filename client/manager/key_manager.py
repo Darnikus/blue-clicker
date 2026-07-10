@@ -5,6 +5,7 @@ from pathlib import Path
 
 from driver.bluetooth_driver import BluetoothDriver
 from manager.key_task import KeyTask
+from manager.preview_preset import PreviewPreset
 from manager.prioritized_key import PrioritizedKey
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,12 @@ class KeyManager:
         logger.info(
             f"Removed key: {key_task.key} with interval: {key_task.interval} sec"
         )
+
+    def get_file_preview(self, path: Path) -> PreviewPreset:
+        with open(path) as file:
+            data = json.load(file)
+
+        return PreviewPreset(data["description"], data["keys"])
 
     def save_keys_to_file(self, file_name: str, description: str | None) -> None:
         json_profile = {
