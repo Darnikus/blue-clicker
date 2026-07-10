@@ -9,11 +9,12 @@ from textual.widgets import Button, DataTable, DirectoryTree, Label
 from manager.preview_preset import PreviewPreset
 
 
-class LoadPresetScreen(ModalScreen):
+class LoadPresetScreen(ModalScreen[Path | None]):
     def __init__(self, file_preview_fn: Callable[[Path], PreviewPreset]) -> None:
         super().__init__()
 
         self._file_preview_callback = file_preview_fn
+        self._selected_file_path: Path | None = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="load-modal-screen"):
@@ -38,6 +39,9 @@ class LoadPresetScreen(ModalScreen):
         if event.button.id == "cancel-button":
             self.app.pop_screen()
 
+        elif event.button.id == "load-button":
+            self.dismiss(self._selected_file_path)
+
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
@@ -45,6 +49,8 @@ class LoadPresetScreen(ModalScreen):
             self.query_one("#file-title", Label).update(
                 f"📄 File: [u]{event.path.name}[/u]"
             )
+
+            self._selected_file_path = event.path
 
             preview = self._file_preview_callback(event.path)
 

@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.containers import Container
@@ -151,8 +152,13 @@ class BlueClickerApp(App):
 
     def load_preset(self) -> None:
         logger.info("Preset is loaded")
+
+        def get_result(result: Path | None) -> None:
+            logger.info(f"{result}")
+
         self.push_screen(
-            LoadPresetScreen(file_preview_fn=self._key_manager.get_file_preview)
+            LoadPresetScreen(file_preview_fn=self._key_manager.get_file_preview),
+            get_result,
         )
 
     def save_preset(self) -> None:
