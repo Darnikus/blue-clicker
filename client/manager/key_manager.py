@@ -79,8 +79,7 @@ class KeyManager:
         self._consumer_task = loop.create_task(self._run_consumer_loop())
 
     async def shutdown(self) -> None:
-        for key_task in self._active_tasks.values():
-            key_task.stop()
+        await self._cleanup_tasks()
 
         self._is_running = False
         if self._consumer_task and not self._consumer_task.done():
@@ -102,6 +101,23 @@ class KeyManager:
     def file_exists(self, file_name: str) -> bool:
         """Check if the preset already exists"""
         return Path(f"presets/{file_name}.json").exists()
+
+    async def _cleanup_tasks(self) -> None:
+        """Cancel all tasks and clean the consumer queue"""
+        active_producers = [task.stop() for task in self._active_tasks.values()]
+        active_producers = [task for task in active_producers if task is not None]
+        if active_producers:
+            # Wait untill all tasks have been stopped
+            await asyncio.gather(*active_producers, return_exceptions=True)
+
+        self._active_tasks.clear()
+
+        while not self._send_queue.empty():
+            try:
+                self._send_queue.get_nowait()
+                self._send_queue.task_done()
+            except asyncio.QueueEmpty:
+                break
 
     async def _run_consumer_loop(self) -> None:
         """The single consumer worker that reads from the priority queue
