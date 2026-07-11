@@ -56,10 +56,10 @@ class BlueClickerApp(App):
         # self._background_task = self.run_worker(self._key_manager.start_sending())
         self._key_manager.start()
 
-    def on_unmount(self) -> None:
+    async def on_unmount(self) -> None:
         logger.info("App shutting down. Signaling background tasks to stop...")
 
-        self._key_manager.shutdown()
+        await self._key_manager.shutdown()
         # self._background_task.cancel()
 
     def action_toggle_pause(self) -> None:

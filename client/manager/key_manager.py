@@ -54,6 +54,14 @@ class KeyManager:
 
         return PreviewPreset(data["description"], data["keys"])
 
+    def load_preset_from_file(self, path: Path) -> None:
+        # What should this method do
+        # 1) Cancel all current running KeyTasks
+        # 2) Read preset JSON file and get data from it
+        # 3) Create new KeyTaaks
+        # 4) Return keys to app to populate DataTable
+        pass
+
     def save_keys_to_file(self, file_name: str, description: str | None) -> None:
         json_profile = {
             "description": description,
@@ -70,7 +78,7 @@ class KeyManager:
         loop = asyncio.get_running_loop()
         self._consumer_task = loop.create_task(self._run_consumer_loop())
 
-    def shutdown(self) -> None:
+    async def shutdown(self) -> None:
         for key_task in self._active_tasks.values():
             key_task.stop()
 
