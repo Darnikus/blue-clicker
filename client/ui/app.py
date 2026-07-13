@@ -90,11 +90,12 @@ class BlueClickerApp(App):
                 return
 
             key, interval, priority = result
+            row_key = self._key_manager.add_key(key, float(interval), priority)
+
             data_table = self.query_one(DataTable)
-            row_key = data_table.add_row(key, interval, priority)
+            data_table.add_row(key, interval, priority, key=row_key)
             data_table.sort("Priority")
 
-            self._key_manager.add_key(str(row_key), key, float(interval), priority)
             logger.info(
                 f"Added key: {key} with interval: {interval} sec"
                 + f" and {priority} priority"
@@ -117,9 +118,10 @@ class BlueClickerApp(App):
                 return
 
             interval, priority = result
+            self._key_manager.edit_key(str(row_key.value), float(interval), priority)
             data_table.update_cell(row_key, "Interval (sec)", value=interval)
             data_table.update_cell(row_key, "Priority", value=priority)
-            self._key_manager.edit_key(str(row_key), float(interval), priority)
+            data_table.sort("Priority")
 
         values = data_table.get_row(row_key)
         self.push_screen(EditKeyScreen(*values), get_result)
@@ -129,7 +131,7 @@ class BlueClickerApp(App):
         data_table = self.query_one(DataTable)
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
-        self._key_manager.remove_key(str(row_key))
+        self._key_manager.remove_key(str(row_key.value))
         data_table.remove_row(row_key)
 
         # Tell Textual to re-run check_action method

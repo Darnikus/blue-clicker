@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import uuid
 from pathlib import Path
 
 from driver.bluetooth_driver import BluetoothDriver
@@ -27,13 +28,15 @@ class KeyManager:
         """Returns True if there is any active task"""
         return bool(self._active_tasks)
 
-    def add_key(self, task_id: str, key: str, interval: float, priority: int) -> None:
+    def add_key(self, key: str, interval: float, priority: int) -> str:
         key_task = KeyTask(self._send_queue, key, interval, priority)
         if self._is_not_paused:
             key_task.toggle_pause(self._is_not_paused)
 
         key_task.start()
+        task_id = uuid.uuid4().hex[:16]
         self._active_tasks[task_id] = key_task
+        return task_id
 
     def edit_key(self, task_key: str, new_interval: float, new_priority: int) -> None:
         key_task = self._active_tasks[task_key]
@@ -54,9 +57,10 @@ class KeyManager:
 
         return PreviewPreset(data["description"], data["keys"])
 
-    def load_preset_from_file(self, path: Path) -> None:
+    async def load_preset_from_file(self, path: Path) -> None:
         # What should this method do
         # 1) Cancel all current running KeyTasks
+        await self._cleanup_tasks()
         # 2) Read preset JSON file and get data from it
         # 3) Create new KeyTaaks
         # 4) Return keys to app to populate DataTable
