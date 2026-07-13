@@ -68,6 +68,8 @@ class LoadPresetScreen(ModalScreen[Path | None]):
                     table.add_column(name, key=name)
 
                 for row in preview.keys:
+                    row["interval"] = f"{row['interval']:g}"
+
                     table.add_row(*row.values())
                 table.sort("Priority")
 

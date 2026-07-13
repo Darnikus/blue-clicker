@@ -55,7 +55,7 @@ class KeyManager:
         with open(path) as file:
             data = json.load(file)
 
-        return PreviewPreset(data["description"], data["keys"])
+        return PreviewPreset(data["description"], data["keys"].values())
 
     async def load_preset_from_file(self, path: Path) -> None:
         # What should this method do
@@ -69,7 +69,9 @@ class KeyManager:
     def save_keys_to_file(self, file_name: str, description: str | None) -> None:
         json_profile = {
             "description": description,
-            "keys": [key.to_dict() for key in self._active_tasks.values()],
+            "keys": {
+                key_id: key.to_dict() for key_id, key in self._active_tasks.items()
+            },
         }
         path = Path(f"presets/{file_name}.json")
         path.parent.mkdir(parents=True, exist_ok=True)
