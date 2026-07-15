@@ -153,6 +153,12 @@ class BlueClickerApp(App):
         return True
 
     def load_preset(self) -> None:
+        if not self._key_manager.has_preset_files():
+            self.notify(
+                "There is nothing to load. Save a preset first.", severity="warning"
+            )
+            return
+
         data_table = self.query_one(DataTable)
 
         async def get_result(result: Path | None) -> None:

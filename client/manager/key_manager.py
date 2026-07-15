@@ -115,6 +115,11 @@ class KeyManager:
         """Check if such key already exists"""
         return any(task.key == check_key for task in self._active_tasks.values())
 
+    def has_preset_files(self) -> bool:
+        directory = Path("presets")
+        file_format = ".json"
+        return directory.is_dir() and any(directory.glob(f"*{file_format}"))
+
     def file_exists(self, file_name: str) -> bool:
         """Check if the preset already exists"""
         return Path(f"presets/{file_name}.json").exists()
