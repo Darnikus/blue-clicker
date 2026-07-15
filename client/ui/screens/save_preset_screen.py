@@ -6,7 +6,7 @@ from textual.screen import ModalScreen
 from textual.validation import Length
 from textual.widgets import Button, Input, Label
 
-from ui.overwrite_screen import OverwriteScreen
+from ui.screens.overwrite_screen import OverwriteScreen
 
 
 class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
