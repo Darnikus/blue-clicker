@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.containers import Container
@@ -8,6 +9,8 @@ from textual.widgets import DataTable, Footer, Header, Log
 from manager.key_manager import KeyManager
 from ui.add_key_screen import AddKeyScreen
 from ui.edit_key_screen import EditKeyScreen
+from ui.load_preset_provider import LoadPresetProvider
+from ui.load_preset_screen import LoadPresetScreen
 from ui.save_preset_provider import SavePresetProvider
 from ui.save_preset_screen import SavePresetScreen
 from utility.log_config import link_textual_ui
@@ -23,7 +26,7 @@ class BlueClickerApp(App):
         ("e", "edit_key", "Edit key"),
         ("r", "remove_key", "Remove key"),
     ]
-    COMMANDS = App.COMMANDS | {SavePresetProvider}
+    COMMANDS = App.COMMANDS | {LoadPresetProvider, SavePresetProvider}
     CSS_PATH = "blueclicker.tcss"
 
     def __init__(self, key_manager: KeyManager) -> None:
@@ -53,10 +56,10 @@ class BlueClickerApp(App):
         # self._background_task = self.run_worker(self._key_manager.start_sending())
         self._key_manager.start()
 
-    def on_unmount(self) -> None:
+    async def on_unmount(self) -> None:
         logger.info("App shutting down. Signaling background tasks to stop...")
 
-        self._key_manager.shutdown()
+        await self._key_manager.shutdown()
         # self._background_task.cancel()
 
     def action_toggle_pause(self) -> None:
@@ -87,11 +90,12 @@ class BlueClickerApp(App):
                 return
 
             key, interval, priority = result
+            row_key = self._key_manager.add_key(key, float(interval), priority)
+
             data_table = self.query_one(DataTable)
-            row_key = data_table.add_row(key, interval, priority)
+            data_table.add_row(key, interval, priority, key=row_key)
             data_table.sort("Priority")
 
-            self._key_manager.add_key(str(row_key), key, float(interval), priority)
             logger.info(
                 f"Added key: {key} with interval: {interval} sec"
                 + f" and {priority} priority"
@@ -114,9 +118,10 @@ class BlueClickerApp(App):
                 return
 
             interval, priority = result
+            self._key_manager.edit_key(str(row_key.value), float(interval), priority)
             data_table.update_cell(row_key, "Interval (sec)", value=interval)
             data_table.update_cell(row_key, "Priority", value=priority)
-            self._key_manager.edit_key(str(row_key), float(interval), priority)
+            data_table.sort("Priority")
 
         values = data_table.get_row(row_key)
         self.push_screen(EditKeyScreen(*values), get_result)
@@ -126,7 +131,7 @@ class BlueClickerApp(App):
         data_table = self.query_one(DataTable)
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
-        self._key_manager.remove_key(str(row_key))
+        self._key_manager.remove_key(str(row_key.value))
         data_table.remove_row(row_key)
 
         # Tell Textual to re-run check_action method
@@ -146,6 +151,32 @@ class BlueClickerApp(App):
             return False
 
         return True
+
+    def load_preset(self) -> None:
+        if not self._key_manager.has_preset_files():
+            self.notify(
+                "There is nothing to load. Save a preset first.", severity="warning"
+            )
+            return
+
+        data_table = self.query_one(DataTable)
+
+        async def get_result(result: Path | None) -> None:
+            assert isinstance(result, Path), (
+                f"Expected Path, got {type(result).__name__}"
+            )
+            rows = await self._key_manager.load_preset_from_file(result)
+            data_table.clear()
+            for key_row, row in rows.items():
+                row["interval"] = f"{row['interval']:g}"
+                data_table.add_row(*row.values(), key=key_row)
+            data_table.sort("Priority")
+            logger.info(f"Preset from '{result.name}' has been loaded")
+
+        self.push_screen(
+            LoadPresetScreen(file_preview_fn=self._key_manager.get_file_preview),
+            get_result,
+        )
 
     def save_preset(self) -> None:
         data_table = self.query_one(DataTable)

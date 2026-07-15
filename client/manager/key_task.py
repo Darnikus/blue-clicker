@@ -56,11 +56,15 @@ class KeyTask:
         self._task = loop.create_task(self._run_loop())
         logger.info(f"Started loop task for key: {self.key}")
 
-    def stop(self) -> None:
+    def stop(self) -> asyncio.Task | None:
         self._is_running = False
-        if self._task and not self._task.done():
-            self._task.cancel()
+
+        current_task = self._task if (self._task and not self._task.done()) else None
+        if current_task:
+            current_task.cancel()
+
         self._task = None
+        return current_task
 
     def toggle_pause(self, state: bool) -> None:
         self._is_not_paused = state

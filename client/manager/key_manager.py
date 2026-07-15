@@ -1,10 +1,13 @@
 import asyncio
 import json
 import logging
+import uuid
 from pathlib import Path
+from typing import Any
 
 from driver.bluetooth_driver import BluetoothDriver
 from manager.key_task import KeyTask
+from manager.preview_preset import PreviewPreset
 from manager.prioritized_key import PrioritizedKey
 
 logger = logging.getLogger(__name__)
@@ -26,13 +29,15 @@ class KeyManager:
         """Returns True if there is any active task"""
         return bool(self._active_tasks)
 
-    def add_key(self, task_id: str, key: str, interval: float, priority: int) -> None:
+    def add_key(self, key: str, interval: float, priority: int) -> str:
         key_task = KeyTask(self._send_queue, key, interval, priority)
         if self._is_not_paused:
             key_task.toggle_pause(self._is_not_paused)
 
         key_task.start()
+        task_id = uuid.uuid4().hex[:16]
         self._active_tasks[task_id] = key_task
+        return task_id
 
     def edit_key(self, task_key: str, new_interval: float, new_priority: int) -> None:
         key_task = self._active_tasks[task_key]
@@ -47,10 +52,37 @@ class KeyManager:
             f"Removed key: {key_task.key} with interval: {key_task.interval} sec"
         )
 
+    def get_file_preview(self, path: Path) -> PreviewPreset:
+        with open(path) as file:
+            data = json.load(file)
+
+        return PreviewPreset(data["description"], data["keys"].values())
+
+    async def load_preset_from_file(self, path: Path) -> dict[str, dict[str, Any]]:
+        """Load preset from a file"""
+        await self._cleanup_tasks()
+
+        with open(path) as file:
+            data = json.load(file)
+
+        keys: dict[str, dict[str, Any]] = data["keys"]
+
+        for key_id, key in keys.items():
+            key_task = KeyTask(self._send_queue, **key)
+            if self._is_not_paused:
+                key_task.toggle_pause(self._is_not_paused)
+
+            key_task.start()
+            self._active_tasks[key_id] = key_task
+
+        return keys
+
     def save_keys_to_file(self, file_name: str, description: str | None) -> None:
         json_profile = {
             "description": description,
-            "keys": [key.to_dict() for key in self._active_tasks.values()],
+            "keys": {
+                key_id: key.to_dict() for key_id, key in self._active_tasks.items()
+            },
         }
         path = Path(f"presets/{file_name}.json")
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,9 +95,8 @@ class KeyManager:
         loop = asyncio.get_running_loop()
         self._consumer_task = loop.create_task(self._run_consumer_loop())
 
-    def shutdown(self) -> None:
-        for key_task in self._active_tasks.values():
-            key_task.stop()
+    async def shutdown(self) -> None:
+        await self._cleanup_tasks()
 
         self._is_running = False
         if self._consumer_task and not self._consumer_task.done():
@@ -84,9 +115,31 @@ class KeyManager:
         """Check if such key already exists"""
         return any(task.key == check_key for task in self._active_tasks.values())
 
+    def has_preset_files(self) -> bool:
+        directory = Path("presets")
+        file_format = ".json"
+        return directory.is_dir() and any(directory.glob(f"*{file_format}"))
+
     def file_exists(self, file_name: str) -> bool:
         """Check if the preset already exists"""
         return Path(f"presets/{file_name}.json").exists()
+
+    async def _cleanup_tasks(self) -> None:
+        """Cancel all tasks and clean the consumer queue"""
+        active_producers = [task.stop() for task in self._active_tasks.values()]
+        active_producers = [task for task in active_producers if task is not None]
+        if active_producers:
+            # Wait untill all tasks have been stopped
+            await asyncio.gather(*active_producers, return_exceptions=True)
+
+        self._active_tasks.clear()
+
+        while not self._send_queue.empty():
+            try:
+                self._send_queue.get_nowait()
+                self._send_queue.task_done()
+            except asyncio.QueueEmpty:
+                break
 
     async def _run_consumer_loop(self) -> None:
         """The single consumer worker that reads from the priority queue
