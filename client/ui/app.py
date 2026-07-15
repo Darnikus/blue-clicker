@@ -153,10 +153,19 @@ class BlueClickerApp(App):
         return True
 
     def load_preset(self) -> None:
-        logger.info("Preset is loaded")
+        data_table = self.query_one(DataTable)
 
-        def get_result(result: Path | None) -> None:
-            logger.info(f"{result}")
+        async def get_result(result: Path | None) -> None:
+            assert isinstance(result, Path), (
+                f"Expected Path, got {type(result).__name__}"
+            )
+            rows = await self._key_manager.load_preset_from_file(result)
+            data_table.clear()
+            for key_row, row in rows.items():
+                row["interval"] = f"{row['interval']:g}"
+                data_table.add_row(*row.values(), key=key_row)
+            data_table.sort("Priority")
+            logger.info(f"Preset from '{result.name}' has been loaded")
 
         self.push_screen(
             LoadPresetScreen(file_preview_fn=self._key_manager.get_file_preview),

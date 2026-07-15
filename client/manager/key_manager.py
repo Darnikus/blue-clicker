@@ -3,6 +3,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
+from typing import Any
 
 from driver.bluetooth_driver import BluetoothDriver
 from manager.key_task import KeyTask
@@ -57,14 +58,24 @@ class KeyManager:
 
         return PreviewPreset(data["description"], data["keys"].values())
 
-    async def load_preset_from_file(self, path: Path) -> None:
-        # What should this method do
-        # 1) Cancel all current running KeyTasks
+    async def load_preset_from_file(self, path: Path) -> dict[str, dict[str, Any]]:
+        """Load preset from a file"""
         await self._cleanup_tasks()
-        # 2) Read preset JSON file and get data from it
-        # 3) Create new KeyTaaks
-        # 4) Return keys to app to populate DataTable
-        pass
+
+        with open(path) as file:
+            data = json.load(file)
+
+        keys: dict[str, dict[str, Any]] = data["keys"]
+
+        for key_id, key in keys.items():
+            key_task = KeyTask(self._send_queue, **key)
+            if self._is_not_paused:
+                key_task.toggle_pause(self._is_not_paused)
+
+            key_task.start()
+            self._active_tasks[key_id] = key_task
+
+        return keys
 
     def save_keys_to_file(self, file_name: str, description: str | None) -> None:
         json_profile = {
