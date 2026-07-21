@@ -58,6 +58,7 @@ AddKeyScreen {
         width: 100%;
         height: auto;
         margin-top: 1;
+        margin: 1;
     }
 
     #priority-header-row {
@@ -72,18 +73,6 @@ AddKeyScreen {
         height: 1;
         text-style: bold;
         color: $text-muted;
-        margin-right: 2;
-    }
-
-    #priority-header-row Button {
-        width: 5;
-        min-width: 0;
-        height: 1;
-        border: none;
-        background: $primary;
-        padding: 0;                   
-        margin: 0;                    
-        content-align: center middle;
     }
 
     #prio-display {
@@ -92,11 +81,14 @@ AddKeyScreen {
         content-align: center middle;
     }
 
+    #prio-help {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
     /* The Single Line Meter */
     #meter-bar {
         width: 100%;       
         background: $surface;
-        color: orange;
         height: 1;
         margin-top: 0;
     }
