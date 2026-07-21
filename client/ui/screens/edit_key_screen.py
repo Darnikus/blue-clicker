@@ -4,13 +4,11 @@ from textual.screen import ModalScreen
 from textual.validation import Number
 from textual.widgets import Button, Input, Label
 
+from ui.priority_slider import PrioritySlider
+
 
 class EditKeyScreen(ModalScreen[tuple[str, int]]):
     """Screen with a dialog to edit key's interval and priority"""
-
-    # At Priority 1: maximum blocks (40)
-    # At Prority 10: minimum blocks (6)
-    _BLOCK_MAP: list[int] = [40, 35, 30, 22, 20, 18, 16, 10, 8, 6]
 
     def __init__(self, key: str, old_interval: float, old_priority: int) -> None:
         super().__init__()
@@ -42,20 +40,16 @@ class EditKeyScreen(ModalScreen[tuple[str, int]]):
             with Vertical(id="priority-group"):
                 with Horizontal(id="priority-header-row"):
                     yield Label("Priority:", id="priority-title")
-                    yield Button("-", id="decrease-prio")
-                    yield Label("05", id="prio-display")
-                    yield Button("+", id="increase-prio")
+                    yield Label(f"{self._priority:02d}", id="prio-display")
+                    yield Label("(Click, Drag, < >)", id="prio-help")
 
                 # Crisp single line meter
-                yield Label("█" * 20, id="meter-bar")
+                yield PrioritySlider(initial_value=self._priority, id="meter-bar")
 
             # Row 3: Footer
             with Container(id="bottom-container"):
                 yield Button("Save", variant="success", id="save-button")
                 yield Button("Cancel", variant="primary", id="cancel-button")
-
-    def on_mount(self) -> None:
-        self._update_priority_ui()
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Updates and toggles the error labels as the user types."""
@@ -72,17 +66,7 @@ class EditKeyScreen(ModalScreen[tuple[str, int]]):
             error_label.add_class("hidden")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "decrease-prio":
-            if self._priority > 1:
-                self._priority -= 1
-                self._update_priority_ui()
-
-        elif event.button.id == "increase-prio":
-            if self._priority < 10:
-                self._priority += 1
-                self._update_priority_ui()
-
-        elif event.button.id == "save-button":
+        if event.button.id == "save-button":
             interval_input = self.query_one("#interval-input", Input)
 
             interval_input.validate(interval_input.value)
@@ -95,17 +79,8 @@ class EditKeyScreen(ModalScreen[tuple[str, int]]):
         elif event.button.id == "cancel-button":
             self.app.pop_screen()
 
-    def _update_priority_ui(self) -> None:
-        """Sync the numeric label and the single-line meter width"""
+    def on_priority_slider_changed(self, message: PrioritySlider.Changed) -> None:
+        """Listens for custom PrioritySlider.Changed messages and updates the UI."""
+        self._priority = message.value
         prio_label = self.query_one("#prio-display", Label)
         prio_label.update(f"{self._priority:02d}")
-
-        meter = self.query_one("#meter-bar", Label)
-        meter.update("█" * self._BLOCK_MAP[self._priority - 1])
-
-        if self._priority <= 3:
-            meter.styles.color = "red"  # High
-        elif self._priority <= 7:
-            meter.styles.color = "orange"  # Moderate
-        else:
-            meter.styles.color = "gray"  # Low

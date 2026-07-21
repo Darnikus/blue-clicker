@@ -42,7 +42,7 @@ class KeyTask:
 
     @priority.setter
     def priority(self, new_priority: int) -> None:
-        if new_priority < 1 or new_priority > 10:
+        if new_priority < 0 or new_priority > 10:
             raise ValueError("Priority cannot be smaller than 1 and bigger than 10")
         self._priority = new_priority
 
