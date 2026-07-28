@@ -1,0 +1,10 @@
+KeyCooldown {
+    width: auto;
+    height: auto;
+    border: wide 10%;
+    padding: 1 1;
+    color: #1A1A1A;
+    content-align: center middle;
+    background: gray;
+    text-style: bold;
+}
