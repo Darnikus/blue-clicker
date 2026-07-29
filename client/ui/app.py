@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, VerticalScroll
 from textual.reactive import reactive
 from textual.widgets import DataTable, Footer, Header, Log
 
@@ -41,6 +41,7 @@ class BlueClickerApp(App):
         with Container(id="app-container"):
             yield Log(auto_scroll=True, id="log")
             yield DataTable(id="key-table")
+            yield VerticalScroll(id="key-cooldown")  # change to with
         yield Footer()
 
     def on_mount(self) -> None:
