@@ -1,10 +1,7 @@
 KeyCooldown {
-    width: auto;
-    height: auto;
-    border: wide 10%;
-    padding: 1 1;
-    color: #1A1A1A;
-    content-align: center middle;
-    background: gray;
+    width: 20;
+    height: 1;
+    color: white;
+    background: black;
     text-style: bold;
 }
