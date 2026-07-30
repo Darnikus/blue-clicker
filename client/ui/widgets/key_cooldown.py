@@ -2,21 +2,28 @@ from time import monotonic
 
 from rich.console import RenderableType
 from rich.text import Text
-from textual.app import App, ComposeResult
 from textual.color import Gradient
 from textual.reactive import reactive
 from textual.widgets import Static
 
 
 class KeyCooldown(Static):
+    DEFAULT_CSS = """
+        KeyCooldown {
+            color: white;
+            background: black;
+            text-style: bold;
+        }
+    """
+
     duration = reactive(0.0)
     remaining_time = reactive(0.0)
 
-    def __init__(self, key: str, interval: float, **kwargs) -> None:
+    def __init__(self, key: str, duration: float, **kwargs) -> None:
         super().__init__(**kwargs)
 
         self._key: str = key
-        self.duration = interval
+        self.duration = duration
         self._anchor_time = monotonic()
 
         self._gradient = Gradient.from_colors("dimgray", "darkorange", "red")
@@ -85,15 +92,3 @@ class KeyCooldown(Static):
             self._countdown_timer.pause()
             self._anchor_time = monotonic()
             self._countdown_timer.resume()
-
-
-class DemoApp(App):
-    CSS_PATH = "test.tcss"
-
-    def compose(self) -> ComposeResult:
-        yield KeyCooldown("D", 10)
-
-
-if __name__ == "__main__":
-    app = DemoApp()
-    app.run()

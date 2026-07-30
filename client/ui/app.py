@@ -13,6 +13,7 @@ from ui.screens.add_key_screen import AddKeyScreen
 from ui.screens.edit_key_screen import EditKeyScreen
 from ui.screens.load_preset_screen import LoadPresetScreen
 from ui.screens.save_preset_screen import SavePresetScreen
+from ui.widgets.key_cooldown import KeyCooldown
 from utility.log_config import link_textual_ui
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,9 @@ class BlueClickerApp(App):
             data_table = self.query_one(DataTable)
             data_table.add_row(key, interval, priority, key=row_key)
             data_table.sort("Priority")
+
+            cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+            cooldown_container.mount(KeyCooldown(key, float(interval)))
 
             logger.info(
                 f"Added key: {key} with interval: {interval} sec"

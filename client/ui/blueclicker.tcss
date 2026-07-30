@@ -18,6 +18,10 @@
     height: 100%;
 }
 
+KeyCooldown {
+    height: 1;
+}
+
 AddKeyScreen {
     align: center middle;
 
