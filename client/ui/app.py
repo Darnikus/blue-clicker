@@ -1,9 +1,11 @@
 import logging
 from pathlib import Path
+from typing import cast
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.reactive import reactive
+from textual.widget import Widget
 from textual.widgets import DataTable, Footer, Header, Log
 
 from manager.key_manager import KeyManager
@@ -100,6 +102,7 @@ class BlueClickerApp(App):
 
             cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
             cooldown_container.mount(KeyCooldown(key, float(interval)))
+            self._sort_cooldown_container(cooldown_container)
 
             logger.info(
                 f"Added key: {key} with interval: {interval} sec"
@@ -205,3 +208,11 @@ class BlueClickerApp(App):
             SavePresetScreen(file_exists_fn=self._key_manager.file_exists),
             get_result,
         )
+
+    def _sort_cooldown_container(self, container: VerticalScroll) -> None:
+
+        def get_cooldown_duration(widget: Widget) -> float:
+            widget = cast(KeyCooldown, widget)
+            return widget.duration
+
+        container.sort_children(key=get_cooldown_duration, reverse=True)
