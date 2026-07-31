@@ -143,14 +143,7 @@ class BlueClickerApp(App):
         data_table.remove_row(row_key)
 
         cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
-        widget = next(
-            (
-                x
-                for x in cooldown_container.children
-                if isinstance(x, KeyCooldown) and x.key_id == row_key.value
-            ),
-            None,
-        )
+        widget = self._get_key_cooldown_widget(cooldown_container, row_key.value)
         if widget is not None:
             widget.remove()
             self._sort_cooldown_container(cooldown_container)
@@ -220,6 +213,18 @@ class BlueClickerApp(App):
         self.push_screen(
             SavePresetScreen(file_exists_fn=self._key_manager.file_exists),
             get_result,
+        )
+
+    def _get_key_cooldown_widget(
+        self, cooldown_container: VerticalScroll, row_key: str | None
+    ) -> KeyCooldown | None:
+        return next(
+            (
+                x
+                for x in cooldown_container.children
+                if isinstance(x, KeyCooldown) and x.key_id == row_key
+            ),
+            None,
         )
 
     def _sort_cooldown_container(self, container: VerticalScroll) -> None:
