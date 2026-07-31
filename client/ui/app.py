@@ -180,6 +180,7 @@ class BlueClickerApp(App):
             return
 
         data_table = self.query_one(DataTable)
+        cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
 
         async def get_result(result: Path | None) -> None:
             assert isinstance(result, Path), (
@@ -187,10 +188,15 @@ class BlueClickerApp(App):
             )
             rows = await self._key_manager.load_preset_from_file(result)
             data_table.clear()
+            cooldown_container.remove_children()
             for key_row, row in rows.items():
                 row["interval"] = f"{row['interval']:g}"
                 data_table.add_row(*row.values(), key=key_row)
+                cooldown_container.mount(
+                    KeyCooldown(key_row, row["key"], float(row["interval"]))
+                )
             data_table.sort("Priority")
+            self._sort_cooldown_container(cooldown_container)
             logger.info(f"Preset from '{result.name}' has been loaded")
 
         self.push_screen(
