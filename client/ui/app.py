@@ -101,7 +101,7 @@ class BlueClickerApp(App):
             data_table.sort("Priority")
 
             cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
-            cooldown_container.mount(KeyCooldown(key, float(interval)))
+            cooldown_container.mount(KeyCooldown(row_key, key, float(interval)))
             self._sort_cooldown_container(cooldown_container)
 
             logger.info(
@@ -141,6 +141,19 @@ class BlueClickerApp(App):
 
         self._key_manager.remove_key(str(row_key.value))
         data_table.remove_row(row_key)
+
+        cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+        widget = next(
+            (
+                x
+                for x in cooldown_container.children
+                if isinstance(x, KeyCooldown) and x.key_id == row_key.value
+            ),
+            None,
+        )
+        if widget is not None:
+            widget.remove()
+            self._sort_cooldown_container(cooldown_container)
 
         # Tell Textual to re-run check_action method
         self.refresh_bindings()

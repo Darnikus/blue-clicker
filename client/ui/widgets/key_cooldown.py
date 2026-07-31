@@ -19,9 +19,10 @@ class KeyCooldown(Static):
     duration = reactive(0.0)
     remaining_time = reactive(0.0)
 
-    def __init__(self, key: str, duration: float, **kwargs) -> None:
+    def __init__(self, key_id: str, key: str, duration: float, **kwargs) -> None:
         super().__init__(**kwargs)
 
+        self.key_id = key_id
         self._key: str = key
         self.duration = duration
         self._anchor_time = monotonic()
