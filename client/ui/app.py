@@ -131,6 +131,12 @@ class BlueClickerApp(App):
             data_table.update_cell(row_key, "Priority", value=priority)
             data_table.sort("Priority")
 
+            cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+            widget = self._get_key_cooldown_widget(cooldown_container, row_key.value)
+            if widget is not None:
+                widget.duration = float(interval)
+            self._sort_cooldown_container(cooldown_container)
+
         values = data_table.get_row(row_key)
         self.push_screen(EditKeyScreen(*values), get_result)
 

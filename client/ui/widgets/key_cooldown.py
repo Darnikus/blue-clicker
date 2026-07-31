@@ -77,6 +77,12 @@ class KeyCooldown(Static):
 
         return output_text
 
+    def watch_duration(self, time: float) -> None:
+        if not self.is_mounted:
+            return
+
+        self._restart_countdown_timer()
+
     def watch_remaining_time(self, time: float) -> None:
         """Called when the remaining time attribute changes."""
         minutes, seconds = divmod(time, 60)
@@ -85,11 +91,14 @@ class KeyCooldown(Static):
         )
         self.refresh()
 
+    def _restart_countdown_timer(self) -> None:
+        self._countdown_timer.pause()
+        self._anchor_time = monotonic()
+        self._countdown_timer.resume()
+
     def _update_remaining_time(self) -> None:
         """Method to update the remaining time."""
         self.remaining_time = max(0, self.duration - (monotonic() - self._anchor_time))
 
         if self.remaining_time == 0:
-            self._countdown_timer.pause()
-            self._anchor_time = monotonic()
-            self._countdown_timer.resume()
+            self._restart_countdown_timer()
