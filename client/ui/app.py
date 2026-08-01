@@ -94,14 +94,18 @@ class BlueClickerApp(App):
                 return
 
             key, interval, priority = result
-            row_key = self._key_manager.add_key(key, float(interval), priority)
+            row_key, attach_callable = self._key_manager.add_key(
+                key, float(interval), priority
+            )
 
             data_table = self.query_one(DataTable)
             data_table.add_row(key, interval, priority, key=row_key)
             data_table.sort("Priority")
 
             cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
-            cooldown_container.mount(KeyCooldown(row_key, key, float(interval)))
+            cooldown_container.mount(
+                KeyCooldown(row_key, key, float(interval), attach_callable)
+            )
             self._sort_cooldown_container(cooldown_container)
 
             logger.info(
@@ -186,14 +190,18 @@ class BlueClickerApp(App):
             assert isinstance(result, Path), (
                 f"Expected Path, got {type(result).__name__}"
             )
-            rows = await self._key_manager.load_preset_from_file(result)
+            rows, attach_callbacks = await self._key_manager.load_preset_from_file(
+                result
+            )
             data_table.clear()
             cooldown_container.remove_children()
-            for key_row, row in rows.items():
+            for (key_row, row), callback in zip(
+                rows.items(), attach_callbacks, strict=False
+            ):
                 row["interval"] = f"{row['interval']:g}"
                 data_table.add_row(*row.values(), key=key_row)
                 cooldown_container.mount(
-                    KeyCooldown(key_row, row["key"], float(row["interval"]))
+                    KeyCooldown(key_row, row["key"], float(row["interval"]), callback)
                 )
             data_table.sort("Priority")
             self._sort_cooldown_container(cooldown_container)

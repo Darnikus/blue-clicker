@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from time import monotonic
 
 from rich.console import RenderableType
@@ -19,7 +20,14 @@ class KeyCooldown(Static):
     duration = reactive(0.0)
     remaining_time = reactive(0.0)
 
-    def __init__(self, key_id: str, key: str, duration: float, **kwargs) -> None:
+    def __init__(
+        self,
+        key_id: str,
+        key: str,
+        duration: float,
+        attach_callable: Callable[[Callable[[float], None]], None],
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
 
         self.key_id = key_id
@@ -29,10 +37,17 @@ class KeyCooldown(Static):
 
         self._gradient = Gradient.from_colors("dimgray", "darkorange", "red")
 
+        self._attach_callable: Callable[[Callable[[float], None]], None] = (
+            attach_callable
+        )
+
     def on_mount(self) -> None:
         """Event handler called when widget is added to the app."""
+        self._attach_callable(
+            self._update_duration
+        )  # Subscribe here, because i need to wait for next notify if do it in init
         self._countdown_timer = self.set_interval(
-            1 / 100, self._update_remaining_time
+            1 / 100, self._update_remaining_time, pause=True
         )  # maybe change interval to 1 / 60
 
     def render(self) -> RenderableType:
@@ -92,13 +107,15 @@ class KeyCooldown(Static):
         self.refresh()
 
     def _restart_countdown_timer(self) -> None:
-        self._countdown_timer.pause()
-        self._anchor_time = monotonic()
         self._countdown_timer.resume()
+        self._anchor_time = monotonic()
+
+    def _update_duration(self, new_duration: float) -> None:
+        self.duration = new_duration
 
     def _update_remaining_time(self) -> None:
         """Method to update the remaining time."""
         self.remaining_time = max(0, self.duration - (monotonic() - self._anchor_time))
 
         if self.remaining_time == 0:
-            self._restart_countdown_timer()
+            self._countdown_timer.pause()
