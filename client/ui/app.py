@@ -70,6 +70,7 @@ class BlueClickerApp(App):
         """An action to pause sending."""
         self.sending_flag = False
         self._key_manager.toggle_pause(self.sending_flag)
+        self._toggle_key_cooldown_pause()
 
     def action_toggle_resume(self) -> None:
         """An action to resume sending."""
@@ -81,6 +82,7 @@ class BlueClickerApp(App):
 
         self.sending_flag = True
         self._key_manager.toggle_pause(self.sending_flag)
+        self._toggle_key_cooldown_pause()
 
     def action_add_key(self) -> None:
         """An action to display the add key dialog."""
@@ -104,7 +106,9 @@ class BlueClickerApp(App):
 
             cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
             cooldown_container.mount(
-                KeyCooldown(row_key, key, float(interval), attach_callable)
+                KeyCooldown(
+                    row_key, key, float(interval), self.sending_flag, attach_callable
+                )
             )
             self._sort_cooldown_container(cooldown_container)
 
@@ -201,7 +205,13 @@ class BlueClickerApp(App):
                 row["interval"] = f"{row['interval']:g}"
                 data_table.add_row(*row.values(), key=key_row)
                 cooldown_container.mount(
-                    KeyCooldown(key_row, row["key"], float(row["interval"]), callback)
+                    KeyCooldown(
+                        key_row,
+                        row["key"],
+                        float(row["interval"]),
+                        self.sending_flag,
+                        callback,
+                    )
                 )
             data_table.sort("Priority")
             self._sort_cooldown_container(cooldown_container)
@@ -254,3 +264,9 @@ class BlueClickerApp(App):
             return widget.duration
 
         container.sort_children(key=get_cooldown_duration, reverse=True)
+
+    def _toggle_key_cooldown_pause(self) -> None:
+        container = self.query_one("#key-cooldown", VerticalScroll)
+        for widget in container.children:
+            if isinstance(widget, KeyCooldown):
+                widget.is_paused = not self.sending_flag  # Same comment about flag

@@ -19,12 +19,14 @@ class KeyCooldown(Static):
 
     duration = reactive(0.0)
     remaining_time = reactive(0.0)
+    is_paused: reactive[bool] = reactive(True)
 
     def __init__(
         self,
         key_id: str,
         key: str,
         duration: float,
+        paused_state: bool,
         attach_callable: Callable[[Callable[[float], None]], None],
         **kwargs,
     ) -> None:
@@ -37,6 +39,8 @@ class KeyCooldown(Static):
 
         self._gradient = Gradient.from_colors("dimgray", "darkorange", "red")
 
+        self.is_paused = not paused_state  # Maybe will rework flags later
+
         self._attach_callable: Callable[[Callable[[float], None]], None] = (
             attach_callable
         )
@@ -47,7 +51,7 @@ class KeyCooldown(Static):
             self._update_duration
         )  # Subscribe here, because i need to wait for next notify if do it in init
         self._countdown_timer = self.set_interval(
-            1 / 100, self._update_remaining_time, pause=True
+            1 / 100, self._update_remaining_time, pause=self.is_paused
         )  # maybe change interval to 1 / 60
 
     def render(self) -> RenderableType:
@@ -59,7 +63,7 @@ class KeyCooldown(Static):
         )  # line goes from left to right
         fill_width = int(width * progress_ratio)
 
-        message = f"{self._key} - {self._cooldown_text}"
+        message = f"{self._key} - {'Paused' if self.is_paused else self._cooldown_text}"
         output_text = Text()
         mid_y = height // 2
 
@@ -97,6 +101,14 @@ class KeyCooldown(Static):
             return
 
         self._restart_countdown_timer()
+
+    def watch_is_paused(self, state: bool) -> None:
+        if self.is_mounted and state:  # Seems like i need to change sending_flag
+            self._countdown_timer.pause()
+            self.refresh()
+        elif self.is_mounted and not state:
+            self._countdown_timer.resume()
+            self.refresh()
 
     def watch_remaining_time(self, time: float) -> None:
         """Called when the remaining time attribute changes."""
