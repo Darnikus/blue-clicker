@@ -1,9 +1,11 @@
 import logging
 from pathlib import Path
+from typing import cast
 
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, VerticalScroll
 from textual.reactive import reactive
+from textual.widget import Widget
 from textual.widgets import DataTable, Footer, Header, Log
 
 from manager.key_manager import KeyManager
@@ -13,6 +15,7 @@ from ui.screens.add_key_screen import AddKeyScreen
 from ui.screens.edit_key_screen import EditKeyScreen
 from ui.screens.load_preset_screen import LoadPresetScreen
 from ui.screens.save_preset_screen import SavePresetScreen
+from ui.widgets.key_cooldown import KeyCooldown
 from utility.log_config import link_textual_ui
 
 logger = logging.getLogger(__name__)
@@ -41,6 +44,7 @@ class BlueClickerApp(App):
         with Container(id="app-container"):
             yield Log(auto_scroll=True, id="log")
             yield DataTable(id="key-table")
+            yield VerticalScroll(id="key-cooldown")  # change to with
         yield Footer()
 
     def on_mount(self) -> None:
@@ -66,6 +70,7 @@ class BlueClickerApp(App):
         """An action to pause sending."""
         self.sending_flag = False
         self._key_manager.toggle_pause(self.sending_flag)
+        self._toggle_key_cooldown_pause()
 
     def action_toggle_resume(self) -> None:
         """An action to resume sending."""
@@ -77,6 +82,7 @@ class BlueClickerApp(App):
 
         self.sending_flag = True
         self._key_manager.toggle_pause(self.sending_flag)
+        self._toggle_key_cooldown_pause()
 
     def action_add_key(self) -> None:
         """An action to display the add key dialog."""
@@ -90,11 +96,21 @@ class BlueClickerApp(App):
                 return
 
             key, interval, priority = result
-            row_key = self._key_manager.add_key(key, float(interval), priority)
+            row_key, attach_callable = self._key_manager.add_key(
+                key, float(interval), priority
+            )
 
             data_table = self.query_one(DataTable)
             data_table.add_row(key, interval, priority, key=row_key)
             data_table.sort("Priority")
+
+            cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+            cooldown_container.mount(
+                KeyCooldown(
+                    row_key, key, float(interval), self.sending_flag, attach_callable
+                )
+            )
+            self._sort_cooldown_container(cooldown_container)
 
             logger.info(
                 f"Added key: {key} with interval: {interval} sec"
@@ -123,6 +139,12 @@ class BlueClickerApp(App):
             data_table.update_cell(row_key, "Priority", value=priority)
             data_table.sort("Priority")
 
+            cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+            widget = self._get_key_cooldown_widget(cooldown_container, row_key.value)
+            if widget is not None:
+                widget.duration = float(interval)
+            self._sort_cooldown_container(cooldown_container)
+
         values = data_table.get_row(row_key)
         self.push_screen(EditKeyScreen(*values), get_result)
 
@@ -133,6 +155,12 @@ class BlueClickerApp(App):
 
         self._key_manager.remove_key(str(row_key.value))
         data_table.remove_row(row_key)
+
+        cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+        widget = self._get_key_cooldown_widget(cooldown_container, row_key.value)
+        if widget is not None:
+            widget.remove()
+            self._sort_cooldown_container(cooldown_container)
 
         # Tell Textual to re-run check_action method
         self.refresh_bindings()
@@ -160,17 +188,33 @@ class BlueClickerApp(App):
             return
 
         data_table = self.query_one(DataTable)
+        cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
 
         async def get_result(result: Path | None) -> None:
             assert isinstance(result, Path), (
                 f"Expected Path, got {type(result).__name__}"
             )
-            rows = await self._key_manager.load_preset_from_file(result)
+            rows, attach_callbacks = await self._key_manager.load_preset_from_file(
+                result
+            )
             data_table.clear()
-            for key_row, row in rows.items():
+            cooldown_container.remove_children()
+            for (key_row, row), callback in zip(
+                rows.items(), attach_callbacks, strict=False
+            ):
                 row["interval"] = f"{row['interval']:g}"
                 data_table.add_row(*row.values(), key=key_row)
+                cooldown_container.mount(
+                    KeyCooldown(
+                        key_row,
+                        row["key"],
+                        float(row["interval"]),
+                        self.sending_flag,
+                        callback,
+                    )
+                )
             data_table.sort("Priority")
+            self._sort_cooldown_container(cooldown_container)
             logger.info(f"Preset from '{result.name}' has been loaded")
 
         self.push_screen(
@@ -200,3 +244,29 @@ class BlueClickerApp(App):
             SavePresetScreen(file_exists_fn=self._key_manager.file_exists),
             get_result,
         )
+
+    def _get_key_cooldown_widget(
+        self, cooldown_container: VerticalScroll, row_key: str | None
+    ) -> KeyCooldown | None:
+        return next(
+            (
+                x
+                for x in cooldown_container.children
+                if isinstance(x, KeyCooldown) and x.key_id == row_key
+            ),
+            None,
+        )
+
+    def _sort_cooldown_container(self, container: VerticalScroll) -> None:
+
+        def get_cooldown_duration(widget: Widget) -> float:
+            widget = cast(KeyCooldown, widget)
+            return widget.duration
+
+        container.sort_children(key=get_cooldown_duration, reverse=True)
+
+    def _toggle_key_cooldown_pause(self) -> None:
+        container = self.query_one("#key-cooldown", VerticalScroll)
+        for widget in container.children:
+            if isinstance(widget, KeyCooldown):
+                widget.is_paused = not self.sending_flag  # Same comment about flag

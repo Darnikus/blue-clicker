@@ -4,7 +4,7 @@ from textual.screen import ModalScreen
 from textual.validation import Number
 from textual.widgets import Button, Input, Label
 
-from ui.priority_slider import PrioritySlider
+from ui.widgets.priority_slider import PrioritySlider
 
 
 class EditKeyScreen(ModalScreen[tuple[str, int]]):

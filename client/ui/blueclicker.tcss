@@ -1,17 +1,25 @@
 #app-container {
-    layout: horizontal;
+    layout: grid;
+    grid-size: 2 2;
+    grid-columns: 3fr 1fr;
+    grid-rows: 1fr 1fr;
     height: 100%;
-    width: 100%
 }
 
 #log {
-    height: 100%;
-    width: 75%;
+    row-span: 2;
 }
 
 #key-table {
     height: 100%;
-    width: 25%;
+}
+
+#key-cooldown {
+    height: 100%;
+}
+
+KeyCooldown {
+    height: 1;
 }
 
 AddKeyScreen {

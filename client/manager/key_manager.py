@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +30,9 @@ class KeyManager:
         """Returns True if there is any active task"""
         return bool(self._active_tasks)
 
-    def add_key(self, key: str, interval: float, priority: int) -> str:
+    def add_key(
+        self, key: str, interval: float, priority: int
+    ) -> tuple[str, Callable[[Callable[[float], None]], None]]:
         key_task = KeyTask(self._send_queue, key, interval, priority)
         if self._is_not_paused:
             key_task.toggle_pause(self._is_not_paused)
@@ -37,7 +40,7 @@ class KeyManager:
         key_task.start()
         task_id = uuid.uuid4().hex[:16]
         self._active_tasks[task_id] = key_task
-        return task_id
+        return task_id, key_task.attach
 
     def edit_key(self, task_key: str, new_interval: float, new_priority: int) -> None:
         key_task = self._active_tasks[task_key]
@@ -58,7 +61,11 @@ class KeyManager:
 
         return PreviewPreset(data["description"], data["keys"].values())
 
-    async def load_preset_from_file(self, path: Path) -> dict[str, dict[str, Any]]:
+    async def load_preset_from_file(
+        self, path: Path
+    ) -> tuple[
+        dict[str, dict[str, Any]], list[Callable[[Callable[[float], None]], None]]
+    ]:
         """Load preset from a file"""
         await self._cleanup_tasks()
 
@@ -66,6 +73,7 @@ class KeyManager:
             data = json.load(file)
 
         keys: dict[str, dict[str, Any]] = data["keys"]
+        attach_callbacks: list[Callable[[Callable[[float], None]], None]] = []
 
         for key_id, key in keys.items():
             key_task = KeyTask(self._send_queue, **key)
@@ -74,8 +82,9 @@ class KeyManager:
 
             key_task.start()
             self._active_tasks[key_id] = key_task
+            attach_callbacks.append(key_task.attach)
 
-        return keys
+        return keys, attach_callbacks
 
     def save_keys_to_file(self, file_name: str, description: str | None) -> None:
         json_profile = {

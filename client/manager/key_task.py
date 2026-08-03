@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+from collections.abc import Callable
 
 from manager.prioritized_key import PrioritizedKey
 
@@ -18,9 +19,12 @@ class KeyTask:
 
         self._task: asyncio.Task | None = None
         self._interval_change_event: asyncio.Event = asyncio.Event()
+        self._total_sleep: float = 0.0
 
         self._is_not_paused: bool = False
         self._is_running: bool = False
+
+        self._observer: Callable[[float], None] | None = None
 
     @property
     def interval(self) -> float:
@@ -45,6 +49,16 @@ class KeyTask:
         if new_priority < 0 or new_priority > 10:
             raise ValueError("Priority cannot be smaller than 1 and bigger than 10")
         self._priority = new_priority
+
+    @property
+    def total_sleep(self) -> float:
+        return self._total_sleep
+
+    @total_sleep.setter
+    def total_sleep(self, new_value: float) -> None:
+        if self.total_sleep != new_value:
+            self._total_sleep = new_value
+            self._notify_observer()
 
     def start(self) -> None:
         if self._task and not self._task.done():
@@ -73,6 +87,15 @@ class KeyTask:
         """Return dict with key, interval and priority."""
         return {"key": self.key, "interval": self.interval, "priority": self.priority}
 
+    def attach(self, callback: Callable[[float], None]) -> None:
+        """Attach an observer to the subject."""
+        self._observer = callback
+
+    def _notify_observer(self) -> None:
+        """Notify the observer about the changed timeout."""
+        if self._observer is not None:
+            self._observer(self.total_sleep)
+
     async def _run_loop(self) -> None:
         try:
             while self._is_running:
@@ -86,11 +109,13 @@ class KeyTask:
 
                     self._interval_change_event.clear()
                     try:
-                        total_sleep = self.interval + self._get_random_human_reaction()
+                        self.total_sleep = (
+                            self.interval + self._get_random_human_reaction()
+                        )
 
                         # If you don't receive data, the script won't know the
                         # socket is dead until the next .send() call fails.
-                        async with asyncio.timeout(total_sleep):
+                        async with asyncio.timeout(self.total_sleep):
                             await self._interval_change_event.wait()
                             logger.info(
                                 f"[{self.key}] Interval change detected."
