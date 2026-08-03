@@ -1,7 +1,0 @@
-KeyCooldown {
-    width: 20;
-    height: 1;
-    color: white;
-    background: black;
-    text-style: bold;
-}
