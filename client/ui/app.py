@@ -6,7 +6,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import DataTable, Footer, Header, Log
+from textual.widgets import DataTable, Footer, Header, RichLog
 
 from manager.key_manager import KeyManager
 from ui.providers.load_preset_provider import LoadPresetProvider
@@ -42,13 +42,13 @@ class BlueClickerApp(App):
     def compose(self) -> ComposeResult:
         yield Header()
         with Container(id="app-container"):
-            yield Log(auto_scroll=True, id="log")
+            yield RichLog(auto_scroll=True, highlight=True, markup=True, id="log")
             yield DataTable(id="key-table")
             yield VerticalScroll(id="key-cooldown")  # change to with
         yield Footer()
 
     def on_mount(self) -> None:
-        log_widget: Log = self.query_one("#log", Log)
+        log_widget: RichLog = self.query_one("#log", RichLog)
         link_textual_ui(log_widget)
 
         data_table = self.query_one(DataTable)

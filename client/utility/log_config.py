@@ -1,20 +1,20 @@
 import logging
 
-from textual.widgets import Log
+from textual.widgets import RichLog
 
 __all__ = ["initialize_logging", "link_textual_ui"]
 
 
 class _TextualLogHandler(logging.Handler):
-    def __init__(self, log_widget: Log) -> None:
+    def __init__(self, log_widget: RichLog) -> None:
         super().__init__()
 
-        self._log_widget: Log = log_widget
+        self._log_widget: RichLog = log_widget
 
     def emit(self, record: logging.LogRecord) -> None:
         message = self.format(record)
 
-        self._log_widget.app.call_next(self._log_widget.write_line, message)
+        self._log_widget.app.call_next(self._log_widget.write, message)
 
 
 def initialize_logging() -> None:
@@ -23,11 +23,11 @@ def initialize_logging() -> None:
     root_logger.setLevel(logging.INFO)
 
 
-def link_textual_ui(log_widget: Log):
+def link_textual_ui(log_widget: RichLog):
     handler = _TextualLogHandler(log_widget)
     formatter = logging.Formatter(
         "%(asctime)s [%(levelname)s] (%(module)s) -> %(message)s"
-    ) # Old format "%(asctime)s - %(levelname)s - %(message)s"
+    )  # Old format "%(asctime)s - %(levelname)s - %(message)s"
     handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
