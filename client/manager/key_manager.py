@@ -165,7 +165,12 @@ class KeyManager:
                         + f" (Priority: '{item.priority}')."
                     )
                     if not await self._driver.send_data(item.key):
-                        logger.error(f"Driver failed to send key {item.key}.")
+                        logger.error(f"Driver failed to send key: '{item.key}'.")
+
+                        # Attempt to resend a key with high priority again
+                        if item.priority <= 3:
+                            logger.info(f"Resending high priority key: '{item.key}'.")
+                            await self._driver.send_data(item.key)
                 else:
                     logger.info(f"Dropped item '{item.key}' because manager is paused.")
 
