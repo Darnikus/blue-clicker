@@ -1,0 +1,19 @@
+[project]
+name = "blue-clicker-client"
+version = "0.9.0"
+dependencies = [
+    "textual==8.2.5",
+]
+requires-python = ">= 3.14.6"
+
+[project.optional-dependencies]
+dev = [
+    "textual-dev==1.8.0",
+]
+
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["driver", "manager", "ui", "utility"]
