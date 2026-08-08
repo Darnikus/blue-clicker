@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 _HOST: str = "127.0.0.1"
 _PORT: int = 8888
@@ -22,15 +23,39 @@ class TerminalApi:
     ) -> None:
         try:
             while True:
-                data = await reader.readline()
-                if not data:
+                request = await reader.readline()
+                if not request:
                     break
 
-                message = data.decode("utf-8").strip()
+                message = request.decode("utf-8").strip()
 
                 print(message)
+                response = {}
+                try:
+                    packet = json.loads(message)
+                    action = packet.get("action")
+                    payload = packet.get("payload")
 
-                writer.write(b"ACK\n")
+                    match action:
+                        case "press":
+                            response = {
+                                "status": "success",
+                                "message": "Message received successfully",
+                                "data": payload,
+                            }
+                        case _:
+                            response = {
+                                "status": "error",
+                                "message": f"Unknown action: {action}",
+                            }
+
+                except json.JSONDecodeError:
+                    response = {
+                        "status": "error",
+                        "message": "Invalid JSON format",
+                    }
+
+                writer.write((json.dumps(response) + "\n").encode("utf-8"))
                 await writer.drain()
 
         except asyncio.CancelledError:
