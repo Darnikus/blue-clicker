@@ -10,9 +10,11 @@ from textual.widgets import DataTable, Footer, Header, RichLog
 
 from manager.key_manager import KeyManager
 from ui.providers.load_preset_provider import LoadPresetProvider
+from ui.providers.open_listener_provider import OpenListenerProvider
 from ui.providers.save_preset_provider import SavePresetProvider
 from ui.screens.add_key_screen import AddKeyScreen
 from ui.screens.edit_key_screen import EditKeyScreen
+from ui.screens.listener_screen import ListenerScreen
 from ui.screens.load_preset_screen import LoadPresetScreen
 from ui.screens.save_preset_screen import SavePresetScreen
 from ui.widgets.key_cooldown import KeyCooldown
@@ -29,7 +31,11 @@ class BlueClickerApp(App):
         ("e", "edit_key", "Edit key"),
         ("r", "remove_key", "Remove key"),
     ]
-    COMMANDS = App.COMMANDS | {LoadPresetProvider, SavePresetProvider}
+    COMMANDS = App.COMMANDS | {
+        LoadPresetProvider,
+        SavePresetProvider,
+        OpenListenerProvider,
+    }
     CSS_PATH = "blueclicker.tcss"
 
     def __init__(self, key_manager: KeyManager) -> None:
@@ -244,6 +250,9 @@ class BlueClickerApp(App):
             SavePresetScreen(file_exists_fn=self._key_manager.file_exists),
             get_result,
         )
+
+    def open_listener(self) -> None:
+        self.push_screen(ListenerScreen())
 
     def _get_key_cooldown_widget(
         self, cooldown_container: VerticalScroll, row_key: str | None

@@ -355,3 +355,23 @@ LoadPresetScreen {
         display: none;
     }
 }
+
+ListenerScreen {
+    align: center middle;
+
+    Label {
+        width: 100%;
+        content-align: center middle;
+    }
+
+    Container {
+        height: auto;
+        align: center middle;
+        margin: 1 0;
+    }
+
+    RichLog {
+        row-span: 2;
+        margin: 1 1;
+    }
+}
