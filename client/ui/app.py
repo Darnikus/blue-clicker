@@ -8,6 +8,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import DataTable, Footer, Header, RichLog
 
+from manager.api import TerminalApi
 from manager.key_manager import KeyManager
 from ui.providers.load_preset_provider import LoadPresetProvider
 from ui.providers.open_listener_provider import OpenListenerProvider
@@ -39,10 +40,11 @@ class BlueClickerApp(App):
     }
     CSS_PATH = "blueclicker.tcss"
 
-    def __init__(self, key_manager: KeyManager) -> None:
+    def __init__(self, key_manager: KeyManager, api: TerminalApi) -> None:
         super().__init__()
 
         self._key_manager = key_manager
+        self._api: TerminalApi = api
 
     sending_flag: reactive[bool] = reactive(False, bindings=True)
 
@@ -275,7 +277,7 @@ class BlueClickerApp(App):
                     cooldown_container.remove_children()
 
                     self.push_screen(
-                        ListenerScreen(), on_returned_from_listener_screen()
+                        ListenerScreen(self._api), on_returned_from_listener_screen()
                     )
 
         self.push_screen(ConfirmScreen(), get_result)

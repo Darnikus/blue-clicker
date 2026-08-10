@@ -1,8 +1,10 @@
 import asyncio
 import json
+import logging
 
 _HOST: str = "127.0.0.1"
 _PORT: int = 8888
+logger = logging.getLogger(__name__)
 
 
 class TerminalApi:
@@ -11,7 +13,7 @@ class TerminalApi:
 
     async def start(self) -> None:
         self._server = await asyncio.start_server(self._handle_client, _HOST, _PORT)
-        print("Server started")
+        logger.info("Server started")
 
     async def stop(self) -> None:
         if self._server:
@@ -29,7 +31,7 @@ class TerminalApi:
 
                 message = request.decode("utf-8").strip()
 
-                print(message)
+                logger.info(message)
                 response = {}
                 try:
                     packet = json.loads(message)
@@ -69,8 +71,9 @@ async def main():
     a = TerminalApi()
     await a.start()
 
-    async with a._server:
-        await a._server.serve_forever()
+    if a._server:
+        async with a._server:
+            await a._server.serve_forever()
 
 
 if __name__ == "__main__":
