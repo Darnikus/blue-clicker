@@ -1,7 +1,13 @@
+import logging
+
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Label, RichLog
+
+from utility.log_config import active_log_widget
+
+logger = logging.getLogger(__name__)
 
 
 class ListenerScreen(Screen):
@@ -15,11 +21,12 @@ class ListenerScreen(Screen):
     def on_mount(self) -> None:
         self._toggle_command_palette(True)
 
-        log = self.query_one(RichLog)
-        log.write("[green]Listener screen is mounted.[/green]")
+        self._log_token = active_log_widget.set(self.query_one(RichLog))
+        logger.info("[green]Listener screen is mounted.[/green]")
 
     def _on_unmount(self) -> None:
         self._toggle_command_palette(False)
+        active_log_widget.reset(self._log_token)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "back-button":

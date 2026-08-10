@@ -18,7 +18,7 @@ from ui.screens.listener_screen import ListenerScreen
 from ui.screens.load_preset_screen import LoadPresetScreen
 from ui.screens.save_preset_screen import SavePresetScreen
 from ui.widgets.key_cooldown import KeyCooldown
-from utility.log_config import link_textual_ui
+from utility.log_config import active_log_widget
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +54,7 @@ class BlueClickerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        log_widget: RichLog = self.query_one("#log", RichLog)
-        link_textual_ui(log_widget)
+        active_log_widget.set(self.query_one("#log", RichLog))
 
         data_table = self.query_one(DataTable)
         data_table.cursor_type = "row"
