@@ -13,6 +13,7 @@ from ui.providers.load_preset_provider import LoadPresetProvider
 from ui.providers.open_listener_provider import OpenListenerProvider
 from ui.providers.save_preset_provider import SavePresetProvider
 from ui.screens.add_key_screen import AddKeyScreen
+from ui.screens.confirm_screen import ConfirmScreen
 from ui.screens.edit_key_screen import EditKeyScreen
 from ui.screens.listener_screen import ListenerScreen
 from ui.screens.load_preset_screen import LoadPresetScreen
@@ -251,7 +252,18 @@ class BlueClickerApp(App):
         )
 
     def open_listener(self) -> None:
-        self.push_screen(ListenerScreen())
+
+        def get_result(result: bool | None) -> None:
+            match result:
+                case None:
+                    logger.exception(
+                        "ConfirmScreen was dismissed without submitting result."
+                    )
+                case True:
+                    logger.info("Confirmed.")
+                    self.push_screen(ListenerScreen())
+
+        self.push_screen(ConfirmScreen(), get_result)
 
     def _get_key_cooldown_widget(
         self, cooldown_container: VerticalScroll, row_key: str | None
