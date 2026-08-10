@@ -253,15 +253,30 @@ class BlueClickerApp(App):
 
     def open_listener(self) -> None:
 
-        def get_result(result: bool | None) -> None:
+        def on_returned_from_listener_screen() -> None:
+            self._key_manager.start()
+
+        async def get_result(result: bool | None) -> None:
             match result:
                 case None:
                     logger.exception(
                         "ConfirmScreen was dismissed without submitting result."
                     )
                 case True:
-                    logger.info("Confirmed.")
-                    self.push_screen(ListenerScreen())
+                    if self.sending_flag:
+                        self.action_toggle_pause()
+
+                    await self._key_manager.shutdown()
+
+                    data_table = self.query_one(DataTable)
+                    data_table.clear()
+
+                    cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+                    cooldown_container.remove_children()
+
+                    self.push_screen(
+                        ListenerScreen(), on_returned_from_listener_screen()
+                    )
 
         self.push_screen(ConfirmScreen(), get_result)
 
