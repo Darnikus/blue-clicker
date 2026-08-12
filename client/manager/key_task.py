@@ -121,7 +121,7 @@ class KeyTask:
                                 f"[{self.key}] Interval change detected."
                                 + " Waking up to apply new setting."
                             )
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         pass
 
                 else:

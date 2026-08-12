@@ -115,7 +115,7 @@ class BluetoothDriver:
                         await self._last_activity_event.wait()
 
                     continue  # If reached here then key was pressed
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.info(
                         "Connection is idle for 5 seconds. Sending heartbeat..."
                     )
