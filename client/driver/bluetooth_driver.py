@@ -111,12 +111,11 @@ class BluetoothDriver:
 
                 try:
                     # Sleeps 5 sec or wakes up instantly if event.set() is called
-                    await asyncio.wait_for(
-                        self._last_activity_event.wait(), timeout=5.0
-                    )
+                    async with asyncio.timeout(delay=5.0):
+                        await self._last_activity_event.wait()
 
                     continue  # If reached here then key was pressed
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.info(
                         "Connection is idle for 5 seconds. Sending heartbeat..."
                     )
