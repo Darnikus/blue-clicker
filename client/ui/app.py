@@ -8,15 +8,19 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import DataTable, Footer, Header, RichLog
 
+from manager.api import TerminalApi
 from manager.key_manager import KeyManager
 from ui.providers.load_preset_provider import LoadPresetProvider
+from ui.providers.open_listener_provider import OpenListenerProvider
 from ui.providers.save_preset_provider import SavePresetProvider
 from ui.screens.add_key_screen import AddKeyScreen
+from ui.screens.confirm_screen import ConfirmScreen
 from ui.screens.edit_key_screen import EditKeyScreen
+from ui.screens.listener_screen import ListenerScreen
 from ui.screens.load_preset_screen import LoadPresetScreen
 from ui.screens.save_preset_screen import SavePresetScreen
 from ui.widgets.key_cooldown import KeyCooldown
-from utility.log_config import link_textual_ui
+from utility.log_config import active_log_widget
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +33,18 @@ class BlueClickerApp(App):
         ("e", "edit_key", "Edit key"),
         ("r", "remove_key", "Remove key"),
     ]
-    COMMANDS = App.COMMANDS | {LoadPresetProvider, SavePresetProvider}
+    COMMANDS = App.COMMANDS | {
+        LoadPresetProvider,
+        SavePresetProvider,
+        OpenListenerProvider,
+    }
     CSS_PATH = "blueclicker.tcss"
 
-    def __init__(self, key_manager: KeyManager) -> None:
+    def __init__(self, key_manager: KeyManager, api: TerminalApi) -> None:
         super().__init__()
 
         self._key_manager = key_manager
+        self._api: TerminalApi = api
 
     sending_flag: reactive[bool] = reactive(False, bindings=True)
 
@@ -48,8 +57,7 @@ class BlueClickerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        log_widget: RichLog = self.query_one("#log", RichLog)
-        link_textual_ui(log_widget)
+        active_log_widget.set(self.query_one("#log", RichLog))
 
         data_table = self.query_one(DataTable)
         data_table.cursor_type = "row"
@@ -244,6 +252,35 @@ class BlueClickerApp(App):
             SavePresetScreen(file_exists_fn=self._key_manager.file_exists),
             get_result,
         )
+
+    def open_listener(self) -> None:
+
+        def on_returned_from_listener_screen() -> None:
+            self._key_manager.start()
+
+        async def get_result(result: bool | None) -> None:
+            match result:
+                case None:
+                    logger.exception(
+                        "ConfirmScreen was dismissed without submitting result."
+                    )
+                case True:
+                    if self.sending_flag:
+                        self.action_toggle_pause()
+
+                    await self._key_manager.shutdown()
+
+                    data_table = self.query_one(DataTable)
+                    data_table.clear()
+
+                    cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
+                    cooldown_container.remove_children()
+
+                    self.push_screen(
+                        ListenerScreen(self._api), on_returned_from_listener_screen()
+                    )
+
+        self.push_screen(ConfirmScreen(), get_result)
 
     def _get_key_cooldown_widget(
         self, cooldown_container: VerticalScroll, row_key: str | None

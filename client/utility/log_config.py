@@ -1,15 +1,19 @@
 import logging
+from contextvars import ContextVar
 
 from textual.widgets import RichLog
 
-__all__ = ["initialize_logging", "link_textual_ui"]
+__all__ = ["initialize_logging"]
+
+active_log_widget: ContextVar[RichLog | None] = ContextVar(
+    "active_log_widget", default=None
+)
 
 
 class _TextualLogHandler(logging.Handler):
-    def __init__(self, log_widget: RichLog) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
-        self._log_widget: RichLog = log_widget
         self._level_colors = {
             "DEBUG": "cyan",
             "INFO": "green",
@@ -18,11 +22,13 @@ class _TextualLogHandler(logging.Handler):
         }
 
     def emit(self, record: logging.LogRecord) -> None:
-        color = self._level_colors.get(record.levelname, "white")
-        record.levelname = f"[{color}][{record.levelname}][/{color}]"
-        message = self.format(record)
+        log_widget = active_log_widget.get()
+        if log_widget and log_widget.is_mounted:
+            color = self._level_colors.get(record.levelname, "white")
+            record.levelname = f"[{color}][{record.levelname}][/{color}]"
+            message = self.format(record)
 
-        self._log_widget.app.call_next(self._log_widget.write, message)
+            log_widget.app.call_next(log_widget.write, message)
 
 
 def initialize_logging() -> None:
@@ -30,13 +36,9 @@ def initialize_logging() -> None:
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
 
-
-def link_textual_ui(log_widget: RichLog):
-    handler = _TextualLogHandler(log_widget)
+    handler = _TextualLogHandler()
     formatter = logging.Formatter(
         "%(asctime)s %(levelname)s (%(module)s) -> %(message)s"
     )  # Old format "%(asctime)s - %(levelname)s - %(message)s"
     handler.setFormatter(formatter)
-
-    root_logger = logging.getLogger()
     root_logger.addHandler(handler)
