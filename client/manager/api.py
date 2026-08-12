@@ -2,23 +2,27 @@ import asyncio
 import json
 import logging
 
+from driver.bluetooth_driver import BluetoothDriver
+
 _HOST: str = "127.0.0.1"
 _PORT: int = 8888
 logger = logging.getLogger(__name__)
 
 
 class TerminalApi:
-    def __init__(self) -> None:
+    def __init__(self, driver: BluetoothDriver) -> None:
+        self._driver: BluetoothDriver = driver
         self._server: asyncio.Server | None = None
 
     async def start(self) -> None:
         self._server = await asyncio.start_server(self._handle_client, _HOST, _PORT)
-        logger.info("Server started")
+        logger.info(f"Server is listening on {_HOST}:{_PORT}")
 
     async def stop(self) -> None:
         if self._server:
             self._server.close()
             await self._server.wait_closed()
+            self._driver.disconnect()
 
     async def _handle_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -29,20 +33,28 @@ class TerminalApi:
                 if not request:
                     break
 
-                message = request.decode("utf-8").strip()
+                request = request.decode("utf-8").strip()
 
-                logger.info(message)
+                logger.info(request)
                 response = {}
                 try:
-                    packet = json.loads(message)
+                    packet = json.loads(request)
                     action = packet.get("action")
                     payload = packet.get("payload")
 
                     match action:
                         case "press":
+                            if not await self._driver.send_data(payload):
+                                logger.error(f"Driver failed to send key: '{payload}'.")
+                                status = "error"
+                                message = "Failed to send key"
+                            else:
+                                status = "success"
+                                message = "Message received successfully"
+
                             response = {
-                                "status": "success",
-                                "message": "Message received successfully",
+                                "status": status,
+                                "message": message,
                                 "data": payload,
                             }
                         case _:
@@ -65,20 +77,3 @@ class TerminalApi:
         finally:
             writer.close()
             await writer.wait_closed()
-
-
-async def main():
-    a = TerminalApi()
-    await a.start()
-
-    if a._server:
-        async with a._server:
-            await a._server.serve_forever()
-
-
-if __name__ == "__main__":
-    a = TerminalApi()
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        asyncio.run(a.stop())

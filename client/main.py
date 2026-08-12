@@ -10,7 +10,7 @@ def main() -> None:
 
     driver: BluetoothDriver = BluetoothDriver()
     key_manager = KeyManager(driver)
-    api: TerminalApi = TerminalApi()
+    api: TerminalApi = TerminalApi(driver)
     app: BlueClickerApp = BlueClickerApp(key_manager, api)
 
     app.run()

@@ -28,7 +28,6 @@ class ListenerScreen(Screen):
         self._toggle_command_palette(True)
 
         self._log_token = active_log_widget.set(self.query_one(RichLog))
-        logger.info("[green]Listener screen is mounted.[/green]")
         await self._api.start()
 
     async def _on_unmount(self) -> None:
