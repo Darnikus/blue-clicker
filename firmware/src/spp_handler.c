@@ -5,12 +5,59 @@
 #include "esp_gap_bt_api.h"
 #include "esp_bt.h"
 
+#define MAX_PAYLOAD_LEN 64
 #define SPP_SERVER_NAME "ESP32_Key_Bridge"
 static const char *TAG = "SPP_HANDLER";
+
+typedef struct {
+    char action[16];
+    char payload[16];
+    bool success;
+} parsed_packet_t;
 
 // This tells the SPP file that the send_ble_key function 
 // is still living over in main.c for now.
 extern void send_ble_key(uint8_t key_code, uint8_t modifier);
+
+parsed_packet_t parse_spp_data(uint8_t *data, uint16_t len) {
+    parsed_packet_t result = {0};
+    
+    if (len >= MAX_PAYLOAD_LEN) {
+        ESP_LOGE(TAG, "Packet is too large: %d bytes", len);
+        return result;
+    }
+
+    char local_copy[MAX_PAYLOAD_LEN];
+    memcpy(local_copy, data, len);
+    local_copy[len] = '\0';
+
+    char *outer_saveptr = NULL;
+    char *outer_token = strtok_r(local_copy, "|", &outer_saveptr);
+    int success_count = 0; 
+
+    while (outer_token != NULL) {
+        char *inner_saveptr = NULL;
+
+        char *key = strtok_r(outer_token, ":", &inner_saveptr);
+        char *value = strtok_r(NULL, ":", &inner_saveptr);
+
+        if (key != NULL && value != NULL) {
+            if (strcmp(key, "ACTION") == 0) {
+                strncpy(result.action, value, sizeof(result.action) - 1);
+                success_count++;
+            } else if (strcmp(key, "PAYLOAD") == 0) {
+                strncpy(result.payload, value, sizeof(result.payload) - 1);
+                success_count++;
+            }
+        }
+        outer_token = strtok_r(NULL, "|", &outer_saveptr);
+    }
+
+    if (success_count == 2) {
+        result.success = true;
+    }
+    return result;
+}
 
 void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param) {
     switch (event) {
@@ -49,15 +96,27 @@ void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
         case ESP_SPP_DATA_IND_EVT:
             ESP_LOGI(TAG, "Relaying %d bytes to PC2", param->data_ind.len);
             ESP_LOG_BUFFER_HEXDUMP(TAG, param->data_ind.data, param->data_ind.len, ESP_LOG_INFO);
-            for (int i = 0; i < param->data_ind.len; i++) {
-                uint8_t data = param->data_ind.data[i];
-                if (data == '\n' || data == '\r') continue;
+            ESP_LOGI(TAG, "Data from spp: %.*s", param->data_ind.len, (char *)param->data_ind.data);
 
-                hid_key_t k = ascii_to_hid(data);
-                if (k.code != 0) {
-                    // Updated send_ble_key to accept modifier
-                    send_ble_key(k.code, k.modifier); 
-                }
+            uint8_t data = param->data_ind.data[0];
+            if (data == '\n' || data == '\r') {
+                ESP_LOGI(TAG, "Received a heartbeat signal from PC1.");
+                break;
+            }
+            
+            parsed_packet_t packet = parse_spp_data(param->data_ind.data, param->data_ind.len);
+            if (packet.success == false) {
+                ESP_LOGE(TAG, "Failed to parse the packet: %.*s", param->data_ind.len, (char *)param->data_ind.data);
+                break;
+            }
+            ESP_LOGI(TAG, "Parsed data: Action: %s, Payload: %s.", packet.action, packet.payload);
+
+            data = (uint8_t)packet.payload[0];
+
+            hid_key_t k = ascii_to_hid(data);
+            if (k.code != 0) {
+                // Updated send_ble_key to accept modifier
+                send_ble_key(k.code, k.modifier); 
             }
             break;
         case ESP_SPP_SRV_OPEN_EVT:
