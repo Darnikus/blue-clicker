@@ -21,6 +21,6 @@ enum {
 
 // The "Master Init" for BLE
 void ble_hid_init(void);
-void send_ble_key(uint8_t key_code, uint8_t modifier);
+void send_ble_key(uint8_t key_code, uint8_t modifier, uint8_t *action);
 
 #endif

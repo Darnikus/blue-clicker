@@ -106,6 +106,15 @@ void ble_hid_task(void *pvParameters) {
                 uint8_t empty[8]  = {0, 0, 0, 0, 0, 0, 0, 0};
 
                 // Send Key Press
+
+                if (strcmp((char *)key.action, "HOLD") == 0) {
+                    ESP_LOGI(TAG, "Got HOLD action in task");
+                } else if (strcmp((char *)key.action, "PRESS") == 0) {
+                    ESP_LOGI(TAG, "Got PRESS action in task");
+                } else if (strcmp((char *)key.action, "RELEASE") == 0) {
+                    ESP_LOGI(TAG, "Got RELEASE action in task");
+                }
+
                 esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
 
                 vTaskDelay(pdMS_TO_TICKS(5)); // Small gap for PC to register press
@@ -118,8 +127,10 @@ void ble_hid_task(void *pvParameters) {
 }
 
 // --- BLE HID Logic: Sending keys ---
-void send_ble_key(uint8_t key_code, uint8_t modifier) {
+void send_ble_key(uint8_t key_code, uint8_t modifier, uint8_t *action) {
     hid_key_t key = { .code = key_code, .modifier = modifier };
+    strlcpy((char *)key.action, (char *)action, sizeof(key.action));
+    ESP_LOGI(TAG, "Action copy in ble successfuly: %s", key.action);
     if (key_queue != NULL) {
         xQueueSend(key_queue, &key, 0); // 0 means don't wait if full
     }

@@ -17,7 +17,7 @@ typedef struct {
 
 // This tells the SPP file that the send_ble_key function 
 // is still living over in main.c for now.
-extern void send_ble_key(uint8_t key_code, uint8_t modifier);
+extern void send_ble_key(uint8_t key_code, uint8_t modifier, uint8_t *action);
 
 parsed_packet_t parse_spp_data(uint8_t *data, uint16_t len) {
     parsed_packet_t result = {0};
@@ -116,7 +116,11 @@ void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
             hid_key_t k = ascii_to_hid(data);
             if (k.code != 0) {
                 // Updated send_ble_key to accept modifier
-                send_ble_key(k.code, k.modifier); 
+                strlcpy((char *)k.action, packet.action, sizeof(packet.action));
+                // I will maybe delete this part and just packet.action to send_ble_key
+                ESP_LOGI(TAG, "Action copy successfuly: %s", k.action);
+
+                send_ble_key(k.code, k.modifier, k.action); 
             }
             break;
         case ESP_SPP_SRV_OPEN_EVT:
