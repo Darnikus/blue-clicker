@@ -109,18 +109,20 @@ void ble_hid_task(void *pvParameters) {
 
                 if (strcmp((char *)key.action, "HOLD") == 0) {
                     ESP_LOGI(TAG, "Got HOLD action in task");
+                    esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
                 } else if (strcmp((char *)key.action, "PRESS") == 0) {
                     ESP_LOGI(TAG, "Got PRESS action in task");
+                    esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
+
+                    vTaskDelay(pdMS_TO_TICKS(5)); // Small gap for PC to register press
+
+                    // Send Key Release
+                    esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, empty, false);
                 } else if (strcmp((char *)key.action, "RELEASE") == 0) {
                     ESP_LOGI(TAG, "Got RELEASE action in task");
+                    // Send Key Release
+                    esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, empty, false);
                 }
-
-                esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
-
-                vTaskDelay(pdMS_TO_TICKS(5)); // Small gap for PC to register press
-
-                // Send Key Release
-                esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, empty, false);
             }
         }
     }

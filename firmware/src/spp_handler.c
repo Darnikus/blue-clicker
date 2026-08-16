@@ -116,11 +116,7 @@ void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
             hid_key_t k = ascii_to_hid(data);
             if (k.code != 0) {
                 // Updated send_ble_key to accept modifier
-                strlcpy((char *)k.action, packet.action, sizeof(packet.action));
-                // I will maybe delete this part and just packet.action to send_ble_key
-                ESP_LOGI(TAG, "Action copy successfuly: %s", k.action);
-
-                send_ble_key(k.code, k.modifier, k.action); 
+                send_ble_key(k.code, k.modifier, (uint8_t *)packet.action); 
             }
             break;
         case ESP_SPP_SRV_OPEN_EVT:
