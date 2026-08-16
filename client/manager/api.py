@@ -41,7 +41,7 @@ class TerminalApi:
                         + f"Payload: {request_message.payload}"
                     )
 
-                    if not await self._driver.send_data(request_message.payload):
+                    if not await self._driver.send_data(request_message.serialize()):
                         logger.error(
                             f"Driver failed to send key: '{request_message.payload}'."
                         )

@@ -164,7 +164,9 @@ class KeyManager:
                         f"Consumer sending: '{item.key}'"
                         + f" (Priority: '{item.priority}')."
                     )
-                    if not await self._driver.send_data(item.key):
+                    if not await self._driver.send_data(
+                        f"ACTION:PRESS|PAYLOAD:{item.key}"
+                    ):
                         logger.error(f"Driver failed to send key: '{item.key}'.")
 
                         # Attempt to resend a key with high priority again
