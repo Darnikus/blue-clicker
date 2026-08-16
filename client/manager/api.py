@@ -3,6 +3,7 @@ import json
 import logging
 
 from driver.bluetooth_driver import BluetoothDriver
+from manager.protocol import InvalidActionError, ProtocolMessage
 
 _HOST: str = "127.0.0.1"
 _PORT: int = 8888
@@ -33,37 +34,39 @@ class TerminalApi:
                 if not request:
                     break
 
-                request = request.decode("utf-8").strip()
-
-                logger.info(request)
-                response = {}
                 try:
-                    packet = json.loads(request)
-                    action = packet.get("action")
-                    payload = packet.get("payload")
+                    request_message = ProtocolMessage.deserialize(request)
+                    logger.info(
+                        f"Received: Action: {request_message.action}, "
+                        + f"Payload: {request_message.payload}"
+                    )
 
-                    match action:
-                        case "press":
-                            if not await self._driver.send_data(payload):
-                                logger.error(f"Driver failed to send key: '{payload}'.")
-                                status = "error"
-                                message = "Failed to send key"
-                            else:
-                                status = "success"
-                                message = "Message received successfully"
+                    if not await self._driver.send_data(request_message.serialize()):
+                        logger.error(
+                            f"Driver failed to send key: '{request_message.payload}'."
+                        )
+                        status = "error"
+                        message = "Failed to send key"
+                    else:
+                        status = "success"
+                        message = "Message received successfully"
 
-                            response = {
-                                "status": status,
-                                "message": message,
-                                "data": payload,
-                            }
-                        case _:
-                            response = {
-                                "status": "error",
-                                "message": f"Unknown action: {action}",
-                            }
+                    response = {
+                        "status": status,
+                        "message": message,
+                        "data": request_message.payload,
+                    }
 
-                except json.JSONDecodeError:
+                except InvalidActionError as e:
+                    logger.exception(
+                        f"Received request has unknown action: {e.invalid_action}."
+                    )
+                    response = {
+                        "status": "error",
+                        "message": f"Unknown action: {e.invalid_action}",
+                    }
+                except ValueError as e:
+                    logger.exception(str(e))
                     response = {
                         "status": "error",
                         "message": "Invalid JSON format",

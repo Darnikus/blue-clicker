@@ -1,7 +1,8 @@
 #include "hid_dev.h"
 
 hid_key_t ascii_to_hid(uint8_t ascii) {
-    hid_key_t k = {0, 0};
+    hid_key_t k = {0};
+    memset(k.action, 0, sizeof(k.action));
     
     // Lowercase a-z
     if (ascii >= 'a' && ascii <= 'z') k.code = (ascii - 'a' + 0x04);
