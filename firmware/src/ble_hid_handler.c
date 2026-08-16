@@ -95,7 +95,7 @@ uint8_t raw_adv_data[] = {
     0x0F, 0x09, 'E','S','P','3','2','_','K','e','y','b','o','a','r','d'
 };
 
-uint8_t held_key = 0;
+uint8_t held_key[2] = {0}; // {Modifier, Key code}
 
 // The background worker task
 void ble_hid_task(void *pvParameters) {
@@ -111,7 +111,8 @@ void ble_hid_task(void *pvParameters) {
 
                 if (strcmp((char *)key.action, "HOLD") == 0) {
                     ESP_LOGI(TAG, "Got HOLD action in task");
-                    held_key = key.code;
+                    held_key[0] = key.modifier;
+                    held_key[1] = key.code;
                     esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
                 } else if (strcmp((char *)key.action, "PRESS") == 0) {
                     ESP_LOGI(TAG, "Got PRESS action in task");
@@ -119,8 +120,9 @@ void ble_hid_task(void *pvParameters) {
 
                     vTaskDelay(pdMS_TO_TICKS(5)); // Small gap for PC to register press
                     
-                    if (held_key != 0) { // Resend held key to continue holding the key
-                        report[2] = held_key;
+                    if (held_key[0] != 0 && held_key[1] != 0) { // Resend held key to continue holding the key
+                        report[0] = held_key[0];
+                        report[2] = held_key[1];
                         esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, report, false);
                     } else {
                         // Send Key Release
@@ -128,7 +130,8 @@ void ble_hid_task(void *pvParameters) {
                     }
                 } else if (strcmp((char *)key.action, "RELEASE") == 0) {
                     ESP_LOGI(TAG, "Got RELEASE action in task");
-                    held_key = 0;
+                    held_key[0] = 0;
+                    held_key[1] = 0;
 
                     // Send Key Release
                     esp_ble_gatts_send_indicate(hid_gatts_if, hid_conn_id, report_handle, 8, empty, false);
