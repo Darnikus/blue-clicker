@@ -7,6 +7,17 @@ logger = logging.getLogger(__name__)
 
 
 class BluetoothDriver:
+    """A driver to handle the Bluetooth socket lifecycle
+    and communication with a microcontroller.
+
+    Attributes:
+        _sock (socket.socket | None): Protected socket object.
+        _heartbeat_task (asyncio.Task | None): Protected task that keeps
+            the socket connection active.
+        __last_activity_event (asyncio.Event): Protected event that is triggered
+            if no send occurs for 5 seconds.
+    """
+
     def __init__(self) -> None:
         self._sock: socket.socket | None = None
 
@@ -23,6 +34,15 @@ class BluetoothDriver:
         self._heartbeat_task = None
 
     async def send_data(self, data: str) -> bool:
+        """Sends data over the socket.
+
+        Args:
+            data (str): Data to send.
+
+        Returns:
+            bool: True if the data was sent successfully;
+                False otherwise.
+        """
         if self._sock is None:
             logger.error("There is no connection.")
             if not await self._connect():
@@ -61,12 +81,23 @@ class BluetoothDriver:
         logger.info("Connection is closed.")
 
     async def _connect(self) -> bool:
+        """Establishes the socket connection.
+
+        Returns:
+            bool: True if connected successfully;
+                False otherwise.
+        """
         # Offload the entire blocking connection to a thread
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._sync_connect)
 
     def _sync_connect(self) -> bool:
-        """Internal synchronous connection method run inside the executor thread."""
+        """Internal synchronous connection method run inside the executor thread.
+
+        Returns:
+            bool: True if connected successfully;
+                False otherwise.
+        """
         self._clean_socket()
         logger.info(f"--- Attempting connection to {server_address} ---")
 
@@ -86,6 +117,9 @@ class BluetoothDriver:
             return False
 
     async def _heartbeat_loop(self) -> None:
+        """Protected method that sends a dummy message every 5 seconds to maintain
+        the connection if no other data has been transmitted.
+        """
         try:
             while True:
                 if self._sock is None:
