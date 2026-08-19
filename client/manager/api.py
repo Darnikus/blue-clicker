@@ -11,15 +11,25 @@ logger = logging.getLogger(__name__)
 
 
 class TerminalApi:
+    """The API that manages incoming requests containing keys and their associated
+    actions.
+
+    Attributes:
+        _driver (BluetoothDriver): A driver that receives keys for sending.
+        _server (asyncio.Server | None): The server that listens for API requests.
+    """
+
     def __init__(self, driver: BluetoothDriver) -> None:
         self._driver: BluetoothDriver = driver
         self._server: asyncio.Server | None = None
 
     async def start(self) -> None:
+        """Starts the API server."""
         self._server = await asyncio.start_server(self._handle_client, _HOST, _PORT)
         logger.info(f"Server is listening on {_HOST}:{_PORT}")
 
     async def stop(self) -> None:
+        """Stops the API server."""
         if self._server:
             self._server.close()
             await self._server.wait_closed()
@@ -28,6 +38,12 @@ class TerminalApi:
     async def _handle_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
+        """Processes incoming requests.
+
+        Args:
+            reader (asyncio.StreamReader): Reads requests.
+            writer (asyncio.StreamWriter): Writes responses.
+        """
         try:
             while True:
                 request = await reader.readline()
