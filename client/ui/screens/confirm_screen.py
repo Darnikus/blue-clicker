@@ -5,6 +5,8 @@ from textual.widgets import Button, Label
 
 
 class ConfirmScreen(ModalScreen[bool | None]):
+    """Dialog screen for confirming navigation to ListenerScreen."""
+
     def compose(self) -> ComposeResult:
         yield Grid(
             Label(
@@ -18,6 +20,11 @@ class ConfirmScreen(ModalScreen[bool | None]):
         )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """The message handler is called when any button is pressed.
+
+        Args:
+            event (Button.Pressed): Event sent when a Button is pressed.
+        """
         if event.button.id == "confirm-button":
             self.dismiss(True)
         else:

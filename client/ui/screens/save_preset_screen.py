@@ -10,6 +10,12 @@ from ui.screens.overwrite_screen import OverwriteScreen
 
 
 class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
+    """Dialog screen to save the preset in a file.
+
+    Attributes:
+        _file_exists (Callable[[str], bool]): The function to check preset duplications.
+    """
+
     def __init__(self, file_exists_fn: Callable[[str], bool]) -> None:
         super().__init__()
 
@@ -46,7 +52,11 @@ class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
                 yield Button("Cancel", variant="primary", id="cancel-button")
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """Updates and toggles the error labels as the user types."""
+        """Updates and toggles the error labels as the user types.
+
+        Args:
+            event (Input.Changed): Posted whenever the input's value changes.
+        """
         if not event.input or not event.input.id:
             return
 
@@ -64,6 +74,11 @@ class SavePresetScreen(ModalScreen[tuple[str, str | None]]):
             error_label.add_class("hidden")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """The message handler is called when any button is pressed.
+
+        Args:
+            event (Button.Pressed): Event sent when a Button is pressed.
+        """
         if event.button.id == "cancel-button":
             self.app.pop_screen()
 

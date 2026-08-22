@@ -6,19 +6,31 @@ from textual.widgets import Label
 
 
 class PrioritySlider(Label):
-    """A custom priority slider widget."""
+    """A custom priority slider widget.
+
+    Attributes:
+        value (reactive[int]): The priority level value.
+        min_value (int): The widget's lower boundary represents the highest priority
+            level.
+        max_value (int): The widget's upper boundary represents the lowest priority
+            level.
+    """
 
     DEFAULT_CSS = """
-PrioritySlider {
-        background: $surface;
-        height: 1;
-        margin-top: 0;
-    }
-"""
+        PrioritySlider {
+            background: $surface;
+            height: 1;
+            margin-top: 0;
+        }
+    """
     value = reactive(0)
 
     class Changed(Message):
-        """Broadcast priority changes to a parent."""
+        """Broadcast priority changes to a parent.
+
+        Attributes:
+            value (int): Updated priority value.
+        """
 
         def __init__(self, value: int) -> None:
             super().__init__()
@@ -39,7 +51,6 @@ PrioritySlider {
         self.can_focus = True  # Allows keyboard interaction
 
     def render(self) -> RenderableType:
-        """Draws the slider."""
         width = self.size.width or 40
 
         total_span = self.max_value - self.min_value
@@ -61,19 +72,31 @@ PrioritySlider {
         return f"[{color}]{left_side}{cursor}[/]"
 
     def on_key(self, event: Key) -> None:
-        """Handles left/right arrow movements"""
+        """Handles left/right arrow movements
+
+        Args:
+            event (Key): Event of a key hit.
+        """
         if event.key == "left":
             self._update_priority(self.value + 1)
         elif event.key == "right":
             self._update_priority(self.value - 1)
 
     def on_mouse_down(self, event: MouseDown) -> None:
-        """Handles single click on the slider track."""
+        """Handles single click on the slider track.
+
+        Args:
+            event (MouseDown): Event of a mouse button press.
+        """
         self.focus()
         self._update_value_from_offset(event.x)
 
     def on_mouse_move(self, event: MouseMove) -> None:
-        """Handls drag on the slider track."""
+        """Handles drag on the slider track.
+
+        Args:
+            event (MouseMove): Event of a mouse drag.
+        """
         if event.button == 1:
             self._update_value_from_offset(event.x)
 
@@ -82,14 +105,22 @@ PrioritySlider {
         self.refresh()
 
     def _update_priority(self, value: int) -> None:
-        """Safely mutates the priority state"""
+        """Safely mutates the priority state.
+
+        Args:
+            value (int): New priority value.
+        """
         new_value = max(0, min(value, 10))
         if new_value != self.value:
             self.value = new_value
             self.post_message(self.Changed(self.value))
 
     def _update_value_from_offset(self, x_offset: int) -> None:
-        """Translates a click into a slider value."""
+        """Translates a click into a slider value.
+
+        Args:
+            x_offset (int): Click position.
+        """
         width = self.size.width
         if width <= 2:
             return

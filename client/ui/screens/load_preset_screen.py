@@ -10,6 +10,14 @@ from manager.preview_preset import PreviewPreset
 
 
 class LoadPresetScreen(ModalScreen[Path | None]):
+    """Dialog screen to load a preset file.
+
+    Attributes:
+        _file_preview_callback (Callable[[Path], PreviewPreset]): The function to get a
+            preview from the preset.
+        _selected_file_path (Path | None): The selected preset file's path.
+    """
+
     def __init__(self, file_preview_fn: Callable[[Path], PreviewPreset]) -> None:
         super().__init__()
 
@@ -33,9 +41,15 @@ class LoadPresetScreen(ModalScreen[Path | None]):
                     yield Button("Cancel", variant="error", id="cancel-button")
 
     def on_mount(self) -> None:
+        """Called when the screen is mounted."""
         self.query_one(DataTable).cursor_type = "none"
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """The message handler is called when any button is pressed.
+
+        Args:
+            event (Button.Pressed): Event sent when a Button is pressed.
+        """
         if event.button.id == "cancel-button":
             self.app.pop_screen()
 
@@ -45,6 +59,11 @@ class LoadPresetScreen(ModalScreen[Path | None]):
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
+        """Handles preset selection.
+
+        Args:
+            event (DirectoryTree.FileSelected): Posted when the preset is selected.
+        """
         if event.path.suffix == ".json":
             self.query_one("#file-title", Label).update(
                 f"📄 File: [u]{event.path.name}[/u]"

@@ -2,6 +2,8 @@ from textual.command import DiscoveryHit, Hit, Hits, Provider
 
 
 class LoadPresetProvider(Provider):
+    """A provider to open LoadPresetScreen."""
+
     async def discover(self) -> Hits:
         app = self.app
         assert hasattr(app, "load_preset"), "The App must implement: 'load_preset'"
@@ -14,7 +16,6 @@ class LoadPresetProvider(Provider):
         )
 
     async def search(self, query: str) -> Hits:
-        """Called on each key-press in the Command Palette"""
         matcher = self.matcher(query)
 
         app = self.app

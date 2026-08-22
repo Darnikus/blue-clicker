@@ -26,6 +26,14 @@ logger = logging.getLogger(__name__)
 
 
 class BlueClickerApp(App):
+    """The project's application.
+
+    Attributes:
+        sending_flag (reactive[bool]): The flag that pauses keys sending.
+        _key_manager (KeyManager): Key logic manager.
+        _api (TerminalApi): API manager to receive keys from other programs.
+    """
+
     BINDINGS = [
         ("p", "toggle_pause", "Pause sending"),
         ("p", "toggle_resume", "Resume sending"),
@@ -40,13 +48,13 @@ class BlueClickerApp(App):
     }
     CSS_PATH = "blueclicker.tcss"
 
+    sending_flag: reactive[bool] = reactive(False, bindings=True)
+
     def __init__(self, key_manager: KeyManager, api: TerminalApi) -> None:
         super().__init__()
 
-        self._key_manager = key_manager
+        self._key_manager: KeyManager = key_manager
         self._api: TerminalApi = api
-
-    sending_flag: reactive[bool] = reactive(False, bindings=True)
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -57,6 +65,7 @@ class BlueClickerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        """Called when the screen is mounted."""
         active_log_widget.set(self.query_one("#log", RichLog))
 
         data_table = self.query_one(DataTable)
@@ -69,6 +78,7 @@ class BlueClickerApp(App):
         self._key_manager.start()
 
     async def on_unmount(self) -> None:
+        """Called when the app shuts down."""
         logger.info("App shutting down. Signaling background tasks to stop...")
 
         await self._key_manager.shutdown()
@@ -96,7 +106,12 @@ class BlueClickerApp(App):
         """An action to display the add key dialog."""
 
         def get_result(result: tuple[str, str, int] | None):
-            """Called when AddKeyScreen is dismissed."""
+            """Called when AddKeyScreen is dismissed.
+
+            Args:
+                result (tuple[str, str, int] | None): Tuple of key, interval, and
+                    priority.
+            """
             if result is None:
                 logger.exception(
                     "AddKeyScreen was dismissed without submitting key and interval"
@@ -135,6 +150,12 @@ class BlueClickerApp(App):
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
         def get_result(result: tuple[str, int] | None) -> None:
+            """Called when EditKeyScreen is dismissed.
+
+            Args:
+                result (tuple[str, str, int] | None): Tuple of updated interval and
+                    priority
+            """
             if result is None:
                 logger.exception(
                     "EditKeyScreen was dismissed without submitting interval"
@@ -157,7 +178,7 @@ class BlueClickerApp(App):
         self.push_screen(EditKeyScreen(*values), get_result)
 
     def action_remove_key(self) -> None:
-        """An action to remove key and its interval"""
+        """An action to remove key and its interval."""
         data_table = self.query_one(DataTable)
         row_key, _ = data_table.coordinate_to_cell_key(data_table.cursor_coordinate)
 
@@ -189,6 +210,7 @@ class BlueClickerApp(App):
         return True
 
     def load_preset(self) -> None:
+        """Opens LoadPresetScreen and interacts with the selected preset."""
         if not self._key_manager.has_preset_files():
             self.notify(
                 "There is nothing to load. Save a preset first.", severity="warning"
@@ -199,6 +221,11 @@ class BlueClickerApp(App):
         cooldown_container = self.query_one("#key-cooldown", VerticalScroll)
 
         async def get_result(result: Path | None) -> None:
+            """Called when LoadPresetScreen is dismissed.
+
+            Args:
+                result (Path | None): The selected preset's path.
+            """
             assert isinstance(result, Path), (
                 f"Expected Path, got {type(result).__name__}"
             )
@@ -231,6 +258,7 @@ class BlueClickerApp(App):
         )
 
     def save_preset(self) -> None:
+        """Opens SavePresetScreen to save the current preset."""
         data_table = self.query_one(DataTable)
 
         if data_table.row_count < 1:
@@ -240,6 +268,12 @@ class BlueClickerApp(App):
             return
 
         def get_result(result: tuple[str, str | None] | None) -> None:
+            """Called when SavePresetScreen is dismissed.
+
+            Args:
+                result (tuple[str, str  |  None] | None): Tuple of filename and
+                    description of the preset being saved.
+            """
             match result:
                 case None:
                     logger.exception(
@@ -254,11 +288,19 @@ class BlueClickerApp(App):
         )
 
     def open_listener(self) -> None:
+        """Opens ListenerScreen to listen for API requests."""
 
         def on_returned_from_listener_screen() -> None:
+            """Triggered upon returning from ListenerScreen."""
             self._key_manager.start()
 
         async def get_result(result: bool | None) -> None:
+            """Called when ConfirmScreen is dismissed.
+
+            Args:
+                result (bool | None): True if a user wants to go to ListenerScreen;
+                    False if a user wants to stay.
+            """
             match result:
                 case None:
                     logger.exception(
@@ -285,6 +327,16 @@ class BlueClickerApp(App):
     def _get_key_cooldown_widget(
         self, cooldown_container: VerticalScroll, row_key: str | None
     ) -> KeyCooldown | None:
+        """Gets the specific KeyCooldown widget by its ID.
+
+        Args:
+            cooldown_container (VerticalScroll): The container that holds KeyCooldown
+                widgets.
+            row_key (str | None): KeyCooldown widget's ID.
+
+        Returns:
+            KeyCooldown | None: A specific KeyCooldown or None if not found.
+        """
         return next(
             (
                 x
@@ -295,6 +347,11 @@ class BlueClickerApp(App):
         )
 
     def _sort_cooldown_container(self, container: VerticalScroll) -> None:
+        """Sorts KeyCooldown widgets by duration in descending order.
+
+        Args:
+            container (VerticalScroll): Container that holds widgets.
+        """
 
         def get_cooldown_duration(widget: Widget) -> float:
             widget = cast(KeyCooldown, widget)
@@ -303,6 +360,7 @@ class BlueClickerApp(App):
         container.sort_children(key=get_cooldown_duration, reverse=True)
 
     def _toggle_key_cooldown_pause(self) -> None:
+        """Toggles the pause state for all widgets within the container."""
         container = self.query_one("#key-cooldown", VerticalScroll)
         for widget in container.children:
             if isinstance(widget, KeyCooldown):
