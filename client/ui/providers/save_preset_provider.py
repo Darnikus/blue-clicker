@@ -2,6 +2,8 @@ from textual.command import DiscoveryHit, Hit, Hits, Provider
 
 
 class SavePresetProvider(Provider):
+    """A provider to open SavePresetScreen."""
+
     async def discover(self) -> Hits:
         app = self.app
         assert hasattr(app, "save_preset"), "The App must implement: 'save_preset'"
@@ -13,9 +15,8 @@ class SavePresetProvider(Provider):
             help="Save current keys to a preset",
         )
 
-    async def search(self, querry: str) -> Hits:
-        """Called on each key-press in the Command Palette"""
-        matcher = self.matcher(querry)
+    async def search(self, query: str) -> Hits:
+        matcher = self.matcher(query)
 
         app = self.app
         assert hasattr(app, "save_preset"), "The App must implement: 'save_preset'"

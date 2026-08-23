@@ -9,6 +9,21 @@ from textual.widgets import Static
 
 
 class KeyCooldown(Static):
+    """Custom widget that displays the countdown to the next key press.
+
+    Attributes:
+        duration (reactive[float]): Duration of the widget's animation.
+        remaining_time (reactive[float]): Remaining time until the widget's animation
+            finishes.
+        is_paused (reactive[bool]): The flag that pauses the widget's animation.
+        key_id (str): ID from DataTable for comparison.
+        _key (str): A key to show.
+        _anchor_time (float): An anchor for calculating remaining time.
+        _gradient (Gradient): Colors used to render the widget.
+        _attach_callable (Callable[[Callable[[float], None]], None]) -> None): The link
+            to subscribe to duration updates.
+    """
+
     DEFAULT_CSS = """
         KeyCooldown {
             color: white;
@@ -97,12 +112,23 @@ class KeyCooldown(Static):
         return output_text
 
     def watch_duration(self, time: float) -> None:
+        """Called when the duration attribute changes.
+
+        Args:
+            time (float): New duration value.
+        """
         if not self.is_mounted:
             return
 
         self._restart_countdown_timer()
 
     def watch_is_paused(self, state: bool) -> None:
+        """Pauses and resumes the widget's animation. Called when the duration attribute
+        changes.
+
+        Args:
+            state (bool): True to pause; False to resume.
+        """
         if self.is_mounted and state:  # Seems like i need to change sending_flag
             self._countdown_timer.pause()
             self.refresh()
@@ -111,7 +137,11 @@ class KeyCooldown(Static):
             self.refresh()
 
     def watch_remaining_time(self, time: float) -> None:
-        """Called when the remaining time attribute changes."""
+        """Called when the remaining time attribute changes.
+
+        Args:
+            time (float): New remaining time value.
+        """
         minutes, seconds = divmod(time, 60)
         self._cooldown_text = (
             f"{minutes:02.0f}:{seconds:02.0f}m" if minutes > 0 else f"{seconds:05.2f}s"
@@ -119,10 +149,16 @@ class KeyCooldown(Static):
         self.refresh()
 
     def _restart_countdown_timer(self) -> None:
+        """Restarts the animation."""
         self._countdown_timer.resume()
         self._anchor_time = monotonic()
 
     def _update_duration(self, new_duration: float) -> None:
+        """Subscribe method to receive duration updates.
+
+        Args:
+            new_duration (float): Received new duration.
+        """
         self.duration = new_duration
 
     def _update_remaining_time(self) -> None:

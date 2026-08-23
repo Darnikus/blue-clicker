@@ -5,6 +5,8 @@ from textual.widgets import Button, Label
 
 
 class OverwriteScreen(ModalScreen[bool | None]):
+    """Dialog screen for confirming preset file overwrite."""
+
     def compose(self) -> ComposeResult:
         with Vertical(id="ovewrite-modal-dialog"):
             yield Label(
@@ -17,6 +19,11 @@ class OverwriteScreen(ModalScreen[bool | None]):
                 yield Button("Cancel", variant="primary", id="cancel-button")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """The message handler is called when any button is pressed.
+
+        Args:
+            event (Button.Pressed): Event sent when a Button is pressed.
+        """
         if event.button.id == "cancel-button":
             self.app.pop_screen()
 

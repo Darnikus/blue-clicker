@@ -12,6 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 class ListenerScreen(Screen):
+    """Screen designed to process incoming API requests.
+
+    Attributes:
+        _api (TerminalApi): The API that listens for incoming requests.
+    """
+
     def __init__(self, api: TerminalApi, **kwargs) -> None:
         super().__init__(**kwargs)
 
@@ -25,23 +31,34 @@ class ListenerScreen(Screen):
         yield RichLog(id="api-log", highlight=True, markup=True)
 
     async def on_mount(self) -> None:
+        """Called when the screen is mounted."""
         self._toggle_command_palette(True)
 
         self._log_token = active_log_widget.set(self.query_one(RichLog))
         await self._api.start()
 
-    async def _on_unmount(self) -> None:
+    async def on_unmount(self) -> None:
+        """Called when leaving the screen."""
         self._toggle_command_palette(False)
         active_log_widget.reset(self._log_token)
         await self._api.stop()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """The message handler is called when any button is pressed.
+
+        Args:
+            event (Button.Pressed): Event sent when a Button is pressed.
+        """
         if event.button.id == "back-button":
             self.app.pop_screen()
 
     def _toggle_command_palette(self, state: bool) -> None:
-        """Removes all commands from the command palette if state is True.\n
-        Because custom providers are assigned in App, this method exists."""
+        """Removes all commands from the command palette if state is True. Because
+        custom providers are assigned in App, this method exists.
+
+        Args:
+            state (bool): True if the screen is mounted; False if it is unmounted.
+        """
         if state:
             self._old_app_commands = self.app.COMMANDS
             self.app.COMMANDS = set()

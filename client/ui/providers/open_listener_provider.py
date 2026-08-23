@@ -2,6 +2,8 @@ from textual.command import DiscoveryHit, Hit, Hits, Provider
 
 
 class OpenListenerProvider(Provider):
+    """A provider to open ListenerScreen."""
+
     async def discover(self) -> Hits:
         app = self.app
         assert hasattr(app, "open_listener"), "The App must implement: 'open_listener'"
@@ -14,7 +16,6 @@ class OpenListenerProvider(Provider):
         )
 
     async def search(self, query: str) -> Hits:
-        """Called on each key-press in the Command Palette"""
         matcher = self.matcher(query)
 
         app = self.app

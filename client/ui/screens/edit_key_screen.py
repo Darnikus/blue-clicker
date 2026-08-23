@@ -8,12 +8,18 @@ from ui.widgets.priority_slider import PrioritySlider
 
 
 class EditKeyScreen(ModalScreen[tuple[str, int]]):
-    """Screen with a dialog to edit key's interval and priority"""
+    """Dialog screen to edit key's interval and priority.
+
+    Attributes:
+        _key (str): Key to send.
+        _interval (float):The time gap between key sends in seconds.
+        _priority (int): Key's priority level.
+    """
 
     def __init__(self, key: str, old_interval: float, old_priority: int) -> None:
         super().__init__()
 
-        self._key = key
+        self._key: str = key
         self._interval: float = old_interval
         self._priority: int = old_priority
 
@@ -52,7 +58,11 @@ class EditKeyScreen(ModalScreen[tuple[str, int]]):
                 yield Button("Cancel", variant="primary", id="cancel-button")
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """Updates and toggles the error labels as the user types."""
+        """Updates and toggles the error labels as the user types.
+
+        Args:
+            event (Input.Changed): Posted whenever the input's value changes.
+        """
         if not event.input or not event.input.id:
             return
 
@@ -66,6 +76,11 @@ class EditKeyScreen(ModalScreen[tuple[str, int]]):
             error_label.add_class("hidden")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """The message handler is called when any button is pressed.
+
+        Args:
+            event (Button.Pressed): Event sent when a Button is pressed.
+        """
         if event.button.id == "save-button":
             interval_input = self.query_one("#interval-input", Input)
 
@@ -80,7 +95,11 @@ class EditKeyScreen(ModalScreen[tuple[str, int]]):
             self.app.pop_screen()
 
     def on_priority_slider_changed(self, message: PrioritySlider.Changed) -> None:
-        """Listens for custom PrioritySlider.Changed messages and updates the UI."""
+        """Listens for custom PrioritySlider.Changed messages and updates the UI.
+
+        Args:
+            message (PrioritySlider.Changed): A broadcast announcing a priority change.
+        """
         self._priority = message.value
         prio_label = self.query_one("#prio-display", Label)
         prio_label.update(f"{self._priority:02d}")
