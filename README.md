@@ -1,8 +1,11 @@
- <h1 align=center>Blue-clicker</h1>
+ <h1 align=center> 
+  <img width="32" height="32" alt="image" src="https://github.com/user-attachments/assets/b20edfce-bef8-46ae-9050-b0d15c0feba7" />
+  Blue-clicker
+ </h1>
 
-A wireless macro and automation suite that lets you queue keystrokes and broadcast them as native BLE keyboard input to a secondary device.
+<h4 align="center"> A wireless macro and automation suite that lets you queue keystrokes and broadcast them as native BLE keyboard input to a secondary device.</h4>
 
-[demo video here]
+![GIF Demo](https://github.com/user-attachments/assets/639a3b26-037b-466a-9a80-57b8eb320485)
 
 ## Table of Contents
 
@@ -153,3 +156,5 @@ External programs can connect by the following endpoint:
 - Mouse support for external programs.
 
 ## Licence
+
+MIT
